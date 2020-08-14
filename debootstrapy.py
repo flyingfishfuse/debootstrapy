@@ -189,19 +189,30 @@ class CommandRunner:
 		redprint(message)
 		print(Exception.with_traceback)
 
-	def exec_command(self, command, blocking = bool, shell_env = True):
+	def exec_command(self, command, blocking = True, shell_env = True):
 		'''
 	returns a subprocess.CompletedProcess object
 	EXITS ON ERROR!
 		'''
 		#pass strings 
 		try:
-			step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			output, error = step.communicate()
-			herp = output.decode()
-			derp = error.decode()
-			if step == subprocess.CompletedProcess:
-				pass		
+		#if we want it to wait, halting program execution
+			if blocking == True:
+				step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				# print the response
+				output, error = step.communicate()
+				herp = output.decode()
+				derp = error.decode()
+				for output_line in herp[0].decode(encoding='utf-8').split('\n'):
+				  greenprint(output_line)
+				for error_lines in herp[0].decode(encoding='utf-8').split('\n'):
+					greenprint(error_lines)
+					# if there are no errors
+				if step.returncode != 0:
+					yellow_bold_print("[+] Shell command executed without error")
+			elif blocking == False:
+				# TODO: not implemented yet
+				pass	
 		except Exception as derp:
 			self.error_exit("[-] Shell Command failed! ", derp)
 
@@ -216,14 +227,12 @@ class CommandRunner:
 		'''
 		# Sequential commands
 		greenprint("[+] Beginning Debootstrap")
-		self.current_command = ["sudo debootstrap --components {} --arch {} , bionic {} {} >> {} ".format( \
-											     self.components,self.arch,self.sandy_path,REPOSITORY,LOGFILE)]
-	
+		self.current_command = ["sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
+											     self.components,self.arch,self.sandy_path,self.repository)]
 		stepper = self.exec_command(self.current_command)
-		
 		if stepper.returncode == 1:
 		    greenprint("[+] Debootstrap Finished Successfully!")
-		else:
+		elif stepper.returncode == 0:
 			error_exit("[-]Debootstrap Failed! Check the logfile!")
 
 ############################################
