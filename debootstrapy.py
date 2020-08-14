@@ -27,17 +27,19 @@
 ####
 ################################################################################
 """
-debootstrapy - a linux tool for using debootstrap to make 
-	a networked, debian based, sandbox.
-	OR, a live image with persistance
+debootstrapy - a python based linux tool for using debootstrap to make 
+	a networked, debian based, sandbox OR a live image with persistance
 
-	currently, only a single os on live usb is supproted
+	Using only basic debian/linux/gnu tools
+
+	currently, only a single os on live usb is supported
 """
-import subprocess
 import os
 import sys
-from io import BytesIO,StringIO
+import pathlib
 import argparse
+import subprocess
+from io import BytesIO,StringIO
 
 __author__ = 'Adam Galindo'
 __email__ = 'null@null.com'
@@ -63,84 +65,94 @@ yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.forma
 
 ###################################################################################
 # Commandline Arguments
+# preliminary scope stuff
 ###################################################################################
-
-parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
-
-parser.add_argument('--user',
+if __name__ == "__main__":
+	
+	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
+	parser.add_argument('--user',
                                  dest    = 'user',
                                  action  = "store" ,
                                  default = "derp" ,
                                  help    = "The username to be created" )
-parser.add_argument('--password',
+	parser.add_argument('--password',
                                  dest    = 'password',
                                  action  = "store" ,
                                  default = 'password' ,
                                  help    = "The password to said username" )
-parser.add_argument('--extra-packages',
+	parser.add_argument('--extra-packages',
                                  dest    = 'extra_extra',
                                  action  = "store" ,
                                  default = 'micro' ,
                                  help    = "comma seperated list of extra packages to install" )
-parser.add_argument('--sandbox-mac',
+	parser.add_argument('--sandbox-mac',
                                  dest    = 'sand_mac',
                                  action  = "store" ,
                                  default = 'de:ad:be:ef:ca:fe' ,
                                  help    = "MAC Address of the Sandbox" )
-parser.add_argument('--sandbox-ip',
+	parser.add_argument('--sandbox-ip',
                                  dest    = 'sand_ip',
                                  action  = "store" ,
                                  default = '192.168.0.3' ,
                                  help    = "IP Address of the Sandbox" )							
-parser.add_argument('--sandbox-iface',
+	parser.add_argument('--sandbox-iface',
                                  dest    = 'sand_iface',
                                  action  = "store" ,
                                  default = 'hakc1' ,
                                  help    = "Interface name for the Sandbox" )
-parser.add_argument('--sandbox-path',
+	parser.add_argument('--sandbox-path',
                                  dest    = 'sandy_path',
                                  action  = "store" ,
                                  default = '/home/moop/Desktop/sandbox' ,
                                  help    = "Full Path of the Sandbox" )
-parser.add_argument('--arch',
+	parser.add_argument('--arch',
                                  dest    = 'arch',
                                  action  = "store" ,
                                  default = 'amd64' ,
                                  help    = "AMD64, X86, ARM, what-have-you" )
-parser.add_argument('--components',
+	parser.add_argument('--components',
                                  dest    = 'components',
                                  action  = "store" ,
                                  default = 'main,contrib,universe,multiverse' ,
                                  help    = "Which repository components are included" )
-parser.add_argument('--repository',
+	parser.add_argument('--repository',
                                  dest    = 'repository',
                                  action  = "store" ,
                                  default = "http://archive.ubuntu.com/ubuntu/" ,
                                  help    = 'The Debian-based repository. E.g. "Ubuntu"' )		
-parser.add_argument('--logfile',
+	parser.add_argument('--logfile',
                                  dest    = 'log_file',
                                  action  = "store" ,
                                  default = "'./debootstrap_log.txt'" ,
                                  help    = 'logfile name' )
-parser.add_argument('--host_iface',
+	parser.add_argument('--host_iface',
                                  dest    = 'host_iface',
                                  action  = "store" ,
                                  default = "eth0" ,
                                  help    = 'Host network interface to use' )
-parser.add_argument('--internal-ip',
+	parser.add_argument('--internal-ip',
                                  dest    = 'internal_ip',
                                  action  = "store" ,
                                  default = "192.168.0.1" ,
                                  help    = 'Host IP address on the chosen interface' )
-parser.add_argument('--network_gateway',
+	parser.add_argument('--network_gateway',
                                  dest    = 'gateway',
                                  action  = "store" ,
                                  default = "192.168.0.1" ,
                                  help    = 'Network Gateway IP' )
-arguments = parser.parse_args()
+	arguments = parser.parse_args()
+
+#Set some variables
+class OSStuff:
+	def __init__(self):
+		self.script_cwd         = pathlib.Path().absolute()
+		self.script_osdir       = pathlib.Path(__file__).parent.absolute() 
+
+if __name__ == "__main__":
+	OSVars = OSStuff()
 
 
-class CommandRunner():
+class CommandRunner:
 	def __init__(self):
 		self.error_code_from_current_command = ""
 		self.current_command = subprocess
@@ -153,72 +165,123 @@ class CommandRunner():
 		self.sandy_path		 = arguments.sandy_path
 		self.arch			 = arguments.arch
 		self.repository	 	 = arguments.repository
+		self.components      = arguments.components
 		self.log_file		 = arguments.log_file
 		self.host_iface		 = arguments.host_iface
 		self.internal_ip	 = arguments.internal_ip
 		self.gateway		 = arguments.gateway
 		self.extras          = "wget debconf nano curl"
-	def error_exit(self):
-		print("$1")
+
+	def error_exit(self, message : str, exception : Exception):
+		redprint(message)
+		print(Exception.with_traceback)
 
 	def exec_command(self, command, blocking = bool, shell_env = True):
-		if shell_env == True:
-			self.current_command = subprocess.run(command , shell=True)
-		else:
-			self.current_command = subprocess.run(command , shell=False)
-		if blocking == True:
-			self.current_command.
+		'''
+	returns a subprocess.CompletedProcess object
+	EXITS ON ERROR!
+		'''
+		try:
+			#pass strings 
+			if shell_env == True:
+				try:
+					 = subprocess.Popen(command , shell=True)
+					if self.current_command.getstatusoutput() == None:
+						return self.current_command
+				except Exception as derp:
+					self.error_exit("[-] Shell Command failed! ",derp)			
+			#pass list
+			else:
+				try:
+					self.current_command = subprocess.run(command , shell=False)
+					return self.current_command
+				except Exception as derp:
+					self.error_exit("[-] Shell Command failed! ",derp)
+			#process completed, now do error checking
+			if self.current_command.CompletedProcess:
+				if self.current_command.SubprocessError:
+					pass
+		
+		except Exception as derp:
+					print(derp)
 
-	def debootstrap_stage1(self):
+	def stage1(self):
+		'''
+	Stage 1 :
+		- sets up base files/directory's
+			* debootstrap
+			* copy resolv.conf
+		- mounts for chroot
+			* /dev, /proc, /sys
+		'''
 		# Sequential commands
-		print("[+] Beginning Debootstrap")
-		thing_to_run = ["sudo", "debootstrap --components {} --arch {} , bionic {} {} >> {} ".format(COMPONENTS,ARCH,SANDBOX,REPOSITORY,LOGFILE)]
-		step = self.exec_command(thing_to_run)
-		if step.returncode == 1:
-		    print("[+] Debootstrap Finished Successfully!")
+		greenprint("[+] Beginning Debootstrap")
+		self.current_command = ["sudo debootstrap --components {} --arch {} , bionic {} {} >> {} ".format( \
+											     self.components,self.arch,self.sandy_path,REPOSITORY,LOGFILE)]
+	
+		stepper = self.exec_command(self.current_command)
+		
+		if stepper.returncode == 1:
+		    greenprint("[+] Debootstrap Finished Successfully!")
 		else:
 			error_exit("[-]Debootstrap Failed! Check the logfile!")
+
+############################################
 		#resolv.conf copy
-		print("[+] Copying Resolv.conf")
-		step = ["sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(SANDBOX)]
-		if step.returncode == 0:
-		    print("[+] Resolv.conf copied!") 
+		greenprint("[+] Copying Resolv.conf")
+		self.current_command = ["sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(self.sandy_path)]
+		stepper = self.exec_command(self.current_command)
+
+		if stepper.returncode == 0:
+		    greenprint("[+] Resolv.conf copied!") 
 		else:
 			error_exit("[-]Copy Failed! Check the logle!")
 
+##########################################
 		# sources.list copy
 		print("[+] Copying Sources.list")
-		step = ["sudo cp /etc/apt/sources.list {} $SANDBOX/etc/apt/".format()]
+		self.current_command = ["sudo cp /etc/apt/sources.list {}/etc/apt/".format(self.sandy_path)]
+		stepper = self.exec_command(self.current_command)
 		if step.returncode == 0:
-	    	print("[+] Sources.list copied!") 
+			print("[+] Sources.list copied!") 
 		else:
-			error_exit("[-]Copy Failed! Check the logle!")
+			error_exit("[-]Copy Failed! Check the logfile!")
+
+##########################################
 		#mount and bind the proper volumes
 		# /dev
 		print("[+] Mounting /dev" )
-		step = ["sudo mount -o bind /dev {} $SANDBOX/dev".format()]
+		self.current_command = ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)]
+		stepper = self.exec_command(self.current_command)
 		if step.returncode == 0:
-	    	print("[+] Mounted!") 
+			print("[+] Mounted!") 
 		else:
 			error_exit("[-]Mount Failed! Check the logle!")
 		# /proc
 		print("[+] Mounting /proc")
-		step = ["sudo mount -o bind -t proc /proc {} $SANDBOX/proc".format()]
+
+########################################
+		self.current_command = ["sudo mount -o bind -t proc /proc {}/proc".format(self.sandy_path)]
+		stepper = self.exec_command(self.current_command)
 		if step.returncode == 0:
-	    	print("[+] Mounted!") 
-		else:
-			error_exit("[-]Mount Failed! Check the logle!")
-		# /sys
-		print("[+] Mounting /sys")
-		step = ["sudo mount -o bind -t sys /sys {} $SANDBOX/sys".format()]
-		if step.returncode == 0:
-	    	print("[+] Mounted!") 
+			print("[+] Mounted!") 
 		else:
 			error_exit("[-]Mount Failed! Check the logle!")
 
+#######################################
+		# /sys
+		print("[+] Mounting /sys")
+		self.current_command = ["sudo mount -o bind -t sys /sys {}/sys".format(self.sandy_path)]
+		stepper = self.exec_command(self.current_command)
+		if step.returncode == 0:
+			print("[+] Mounted!") 
+		else:
+			error_exit("[-]Mount Failed! Check the logle!")
+
+###############################################################################
 		#finish setting up the basic system
-	def deboot_second_stage():
-		steps = [["sudo chroot {} $SANDBOX".format(self.sandy_path)]						,\
+	def stage2(self):
+		steps = [["sudo chroot {} ".format(self.sandy_path)]						,\
 				 ["useradd {}".format(self.user)]											,\
 				 ["passwd  {}".format(self.user)]											,\
 				 ["login {}".format(self.user)]												,\
@@ -232,31 +295,31 @@ class CommandRunner():
 		#tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
 
 	#begin setting up services
-	def deboot_third_stage():
+	def deboot_third_stage(self):
 
-		step = ["sudo -S apt install $EXTRA_PACKAGES".format()]
+		self.current_command = ["sudo -S apt install $EXTRA_PACKAGES".format()]
 
 	#Makes an interface with iproute1
-	def create_iface_ipr1():
-		step = ["sudo -S modprobe dummy".format()]
-		step = ["sudo -S ip link set name {} $SANDBOX_{} IFACE_NAME dev dummy0".format()]
-		step = ["sudo -S ifcong {} $SANDBOX_{} IFACE_NAME hw ether {} $SANDBOX_MAC_ADDRESS".format()]
+	def create_iface_ipr1(self):
+		self.current_command = ["sudo -S modprobe dummy".format()]
+		self.current_command = ["sudo -S ip link set name {} $SANDBOX_{} IFACE_NAME dev dummy0".format()]
+		self.current_command = ["sudo -S ifcong {} $SANDBOX_{} IFACE_NAME hw ether {} $SANDBOX_MAC_ADDRESS".format()]
 
 	#Makes an interface with iproute2
-	def create_iface_ipr2():
-		step = ["ip link add {} $SANDBOX_{} IFACE_NAME type veth".format()]
+	def create_iface_ipr2(self):
+		self.current_command = ["ip link add {} $SANDBOX_{} IFACE_NAME type veth".format()]
 
-	def del_iface1():
+	def del_iface1(self):
 		steps = [["sudo -S ip addr del {} $SANDBOX_IP_ADDRESS/24 brd + dev {} $SANDBOX_{} IFACE_NAME".format()],\
 			 	 ["sudo -S ip link delete {} $SANDBOX_{} IFACE_NAME type dummy".format()],\
 				 ["sudo -S rmmod dummy".format()]]
 
 	#Deletes the SANDBOX Interface
-	def del_iface2():
-		step = ["ip link del {} $SANDBOX_{} IFACE_NAME".format()]
+	def del_iface2(self):
+		self.current_command = ["ip link del {} $SANDBOX_{} IFACE_NAME".format()]
 
 	#run this from the HOST
-	def setup_host_networking():
+	def setup_host_networking(self):
 		#Allow forwarding on HOST IFACE
 		steps = [["sysctl -w net.ipv4.conf.$HOST_IF_NAME.forwarding=1".format()],\
 		#Allow from sandbox to outside
@@ -266,7 +329,7 @@ class CommandRunner():
 
 	#this is a seperate "computer", The following is in case you want to setup another
 	#virtual computer inside this one and allow to the outside
-	def sandbox_forwarding():
+	def sandbox_forwarding(self):
 		#Allow forwarding on Sandbox IFACE
 		steps = [["sysctl -w net.ipv4.conf.{} $SANDBOX_{} IFACE_NAME.forwarding=1".format()],\
 		#Allow forwarding on Host IFACE
@@ -276,7 +339,7 @@ class CommandRunner():
 				["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]]
 
 	#run this from the Host
-	def establish_network():
+	def establish_network(self):
 		# 1. Delete all existing rules
 		steps = [["iptables -F"] ,\
 		 # 2. Set default chain policies
@@ -296,5 +359,3 @@ class CommandRunner():
 			     ["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT".format()]]
 
 
-if __name__ == "__main__":
-   "wat"
