@@ -141,7 +141,7 @@ if __name__ == "__main__":
 	parser.add_argument('--logfile',
                                  dest    = 'log_file',
                                  action  = "store" ,
-                                 default = "'./debootstrap_log.txt'" ,
+                                 default = './debootstrap_log.txt' ,
                                  help    = 'logfile name' )
 	parser.add_argument('--host-interface',
                                  dest    = 'host_iface',
@@ -398,6 +398,7 @@ if __name__ == "__main__":
 	if arguments.config_file == True:
 		config = configparser.ConfigParser()
 		config.read('debootstrapy.config')
+		user_choice = config['Thing To Do']
 		for option in config.sections():
 			if option == "Debian Buster":
 				kwargs = config[option]
