@@ -270,33 +270,33 @@ class CommandRunner:
         #########################
         ##      64-BIT OS       #
         #########################
-        if self.bit_size = "32":    
+        if self.bit_size == "32":    
             if self.arch == "ARM":
                 greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}") 
                 self.current_command = "grub-install --removable --target=arm-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK "
                 stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
                     greenprint("[+] GRUB2 Install Finished Successfully!")
-	            else
+	            else:
     	            error_exit("[-]GRUB2 Install Failed! Check the logfile!", derp)
             elif self.arch == "x86""
                 greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}")
-                step = "grub-install --removable --target=i386-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK "
+                self.current_command = "grub-install --removable --target=i386-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK "
+                stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
-	                cecho "[+] GRUB2 Install Finished Successfully!" lolcat
-	            else
-		            error_exit "[-]GRUB2 Install Failed! Check the logfile!" 1>&2 >> $LOGFILE
-	            fi
-        else if [$ARCH == "X64"]
-            cecho "[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}" yellow
-            grub-install --removable --target=X86_64-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK 
-                if [ "$?" = "0" ]; then
-	                cecho "[+] GRUB2 Install Finished Successfully!" lolcat
-	            else
-		            error_exit "[-]GRUB2 Install Failed! Check the logfile!" 1>&2 >> $LOGFILE
-	            fi
-        else
-            cecho "Something WIERD happened, Throw a banana and try again!"
+	                greenprint("[+] GRUB2 Install Finished Successfully!")
+				else:
+					error_exit("[-]GRUB2 Install Failed! Check the logfile!")
+			elif self.arch == "x64":
+            	greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}")
+            	self.current_command = "grub-install --removable --target=X86_64-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK "
+                stepper = self.exec_command(self.current_command)
+                if stepper.returncode == 1:
+	                greenprint("[+] GRUB2 Install Finished Successfully!")
+	            else:
+		            error_exit("[-]GRUB2 Install Failed! Check the logfile!")
+        else:
+            greenprint("Something WIERD happened, Throw a banana and try again!"
     
     # Copy the MBR for syslinux booting of LIVE disk
     dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/sdX
