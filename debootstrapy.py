@@ -68,7 +68,7 @@ yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.forma
 
 ###################################################################################
 # Commandline Arguments
-# preliminary scope stuff
+# I guess we start at the top!
 ###################################################################################
 if __name__ == "__main__":
 
@@ -158,10 +158,8 @@ if __name__ == "__main__":
                                  action  = "store" ,
                                  default = "192.168.0.1" ,
                                  help    = 'Network Gateway IP' )
-	arguments = parser.parse_args()
-	if arguments.config_file == True:
-		config = configparser.ConfigParser()
-		config.read('debootstrapy-config.ini')
+	# dont use this here, not time for it to be parsed yet
+	#arguments = parser.parse_args()
 
 #Set some variables
 
@@ -175,24 +173,28 @@ if __name__ == "__main__":
 
 
 class CommandRunner:
-	def __init__(self):
+	def __init__(self, sand_hostname, user, password ,\
+				 extra, sand_mac, sand_ip,sand_iface ,\
+				 sandy_netmask, sandy_path, arch     ,\
+				 repository, components, log_file    ,\
+				 host_iface, internal_ip, gateway    ):
 		self.current_command  = subprocess
-		self.sandbox_hostname = argparse.sand_hostname 
-		self.user             = arguments.user
-		self.password         = arguments.password
-		self.extra_packages   = arguments.extra_extra
-		self.sand_mac         = arguments.sand_mac
-		self.sand_ip		  = arguments.sand_ip
-		self.sand_iface		  = arguments.sand_iface
-		self.sandy_netmask    = arguments.sandy_netmask
-		self.sandy_path		  = arguments.sandy_path
-		self.arch			  = arguments.arch
-		self.repository	 	  = arguments.repository
-		self.components       = arguments.components
-		self.log_file		  = arguments.log_file
-		self.host_iface		  = arguments.host_iface
-		self.internal_ip	  = arguments.internal_ip
-		self.gateway		  = arguments.gateway
+		self.sandbox_hostname = sand_hostname 
+		self.user             = user
+		self.password         = password
+		self.extra_packages   = extra_extra
+		self.sand_mac         = sand_mac
+		self.sand_ip		  = sand_ip
+		self.sand_iface		  = sand_iface
+		self.sandy_netmask    = sandy_netmask
+		self.sandy_path		  = sandy_path
+		self.arch			  = arch
+		self.repository	 	  = repository
+		self.components       = components
+		self.log_file		  = log_file
+		self.host_iface		  = host_iface
+		self.internal_ip	  = internal_ip
+		self.gateway		  = gateway
 		self.extras           = "debconf nano curl"
 		self.error_code_from_current_command = ""
 
@@ -391,3 +393,30 @@ class CommandRunner:
 			     ["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT".format()]]
 
 
+if __name__ == "__main__":
+	arguments = parser.parse_args()
+	if arguments.config_file == True:
+		config = configparser.ConfigParser()
+		config.read('debootstrapy.config')
+		for option in config.sections():
+			if option == "Debian Buster":
+				kwargs = config[option]
+				CommandRunner(**kwargs)
+			elif option == 'Ubuntu 18.04':
+				pass
+			elif option == 'Ubuntu 20.04':
+				pass
+			elif option == 'Linux Mint'
+				pass
+			else:
+				redprint("[-] Option not in config file")
+	elif arguments.config_file == False:
+		thing_to_do = CommandRunner(arguments.sand_hostname ,arguments.user       ,\
+					  arguments.password,	arguments.extra_extra     ,\
+					  arguments.sand_mac,	arguments.sand_ip         ,\
+					  arguments.sand_iface, arguments.sandy_netmask ,\
+					  arguments.sandy_path, arguments.arch          ,\
+					  arguments.repository, arguments.components    ,\
+					  arguments.log_file,	arguments.host_iface      ,\
+					  arguments.internal_ip, arguments.gateway      ,\
+					  "debconf nano curl")
