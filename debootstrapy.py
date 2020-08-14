@@ -1,10 +1,72 @@
+# -*- coding: utf-8 -*-
+################################################################################
+##            debootstrapy - a linux tool for using debootstrap               ##
+################################################################################
+# Copyright (c) 2020 Adam Galindo                                             ##
+#                                                                             ##
+# Permission is hereby granted, free of charge, to any person obtaining a copy##
+# of this software and associated documentation files (the "Software"),to deal##
+# in the Software without restriction, including without limitation the rights##
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell   ##
+# copies of the Software, and to permit persons to whom the Software is       ##
+# furnished to do so, subject to the following conditions:                    ##
+#                                                                             ##
+# Licenced under GPLv3                                                        ##
+# https://www.gnu.org/licenses/gpl-3.0.en.html                                ##
+#                                                                             ##
+# The above copyright notice and this permission notice shall be included in  ##
+# all copies or substantial portions of the Software.                         ##
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+####
+################################################################################
+"""
+debootstrapy - a linux tool for using debootstrap to make 
+	a networked, debian based, sandbox.
+	OR, a live image with persistance
+
+	currently, only a single os on live usb is supproted
+"""
 import subprocess
 import os
 import sys
 from io import BytesIO,StringIO
 import argparse
 
+__author__ = 'Adam Galindo'
+__email__ = 'null@null.com'
+__version__ = '1'
+__license__ = 'GPLv3'
+
+###################################################################################
+# Color Print Functions
+###################################################################################
+import colorama
+from colorama import init
+init()
+from colorama import Fore, Back, Style
+blueprint = lambda text: print(Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL) if (TESTING == True) else None
+greenprint = lambda text: print(Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL) if (TESTING == True) else None
+redprint = lambda text: print(Fore.RED + ' ' +  text + ' ' + Style.RESET_ALL) if (TESTING == True) else None
+# inline colorization for lambdas in a lambda
+makered    = lambda text: Fore.RED + ' ' +  text + ' ' + Style.RESET_ALL
+makegreen  = lambda text: Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL
+makeblue   = lambda text: Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL
+makeyellow = lambda text: Fore.YELLOW + ' ' +  text + ' ' + Style.RESET_ALL
+yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.format(text) + Style.RESET_ALL) if (TESTING == True) else None
+
+###################################################################################
+# Commandline Arguments
+###################################################################################
+
 parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
+
 parser.add_argument('--user',
                                  dest    = 'user',
                                  action  = "store" ,
@@ -77,6 +139,7 @@ parser.add_argument('--network_gateway',
                                  help    = 'Network Gateway IP' )
 arguments = parser.parse_args()
 
+
 class CommandRunner():
 	def __init__(self):
 		self.error_code_from_current_command = ""
@@ -94,19 +157,22 @@ class CommandRunner():
 		self.host_iface		 = arguments.host_iface
 		self.internal_ip	 = arguments.internal_ip
 		self.gateway		 = arguments.gateway
-
+		self.extras          = "wget debconf nano curl"
 	def error_exit(self):
 		print("$1")
 
-	def exec_command(self, command, blocking = bool ):
-		self.current_command = subprocess.call(command)
+	def exec_command(self, command, blocking = bool, shell_env = True):
+		if shell_env == True:
+			self.current_command = subprocess.run(command , shell=True)
+		else:
+			self.current_command = subprocess.run(command , shell=False)
 		if blocking == True:
 			self.current_command.
 
 	def debootstrap_stage1(self):
 		# Sequential commands
 		print("[+] Beginning Debootstrap")
-		thing_to_run = ["sudo", "debootstrap" ,"--components {}" , "--arch {} , bionic {} {} >> {} ".format(COMPONENTS,ARCH,SANDBOX,REPOSITORY,LOGFILE)]
+		thing_to_run = ["sudo", "debootstrap --components {} --arch {} , bionic {} {} >> {} ".format(COMPONENTS,ARCH,SANDBOX,REPOSITORY,LOGFILE)]
 		step = self.exec_command(thing_to_run)
 		if step.returncode == 1:
 		    print("[+] Debootstrap Finished Successfully!")
@@ -143,7 +209,7 @@ class CommandRunner():
 		else:
 			error_exit("[-]Mount Failed! Check the logle!")
 		# /sys
-		print("[+] Mounting /dev")
+		print("[+] Mounting /sys")
 		step = ["sudo mount -o bind -t sys /sys {} $SANDBOX/sys".format()]
 		if step.returncode == 0:
 	    	print("[+] Mounted!") 
@@ -152,14 +218,16 @@ class CommandRunner():
 
 		#finish setting up the basic system
 	def deboot_second_stage():
-		step = ["sudo chroot {} $SANDBOX".format()]
-		step = ["useradd $USER".format()]
-		step = ["passwd  $USER".format()]
-		step = ["login $USER".format()]
-		step = ["sudo -S apt-get update".format()]
-		step = ["sudo -S apt-get --no-install-recommends install wget debconf nano curl".format()]
-		step = ["sudo -S apt-get update".format()]  #clean the gpg error message
-		step = ["sudo -S apt-get install locales dialog".format()]  #If you don't talk en_US
+		steps = [["sudo chroot {} $SANDBOX".format(self.sandy_path)]						,\
+				 ["useradd {}".format(self.user)]											,\
+				 ["passwd  {}".format(self.user)]											,\
+				 ["login {}".format(self.user)]												,\
+				 ["sudo -S apt-get update"]													,\
+				 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]	,\
+				#clean the gpg error messag
+				 ["sudo -S apt-get update"]													,\  
+				 #If you don't talk en_US
+				 ["sudo -S apt-get install locales dialog"]									,\
 		#sudo -S locale-gen en_US.UTF-8  # or your preferred locale
 		#tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
 
@@ -179,9 +247,9 @@ class CommandRunner():
 		step = ["ip link add {} $SANDBOX_{} IFACE_NAME type veth".format()]
 
 	def del_iface1():
-		step = ["sudo -S ip addr del {} $SANDBOX_IP_ADDRESS/24 brd + dev {} $SANDBOX_{} IFACE_NAME".format()]
-		step = ["sudo -S ip link delete {} $SANDBOX_{} IFACE_NAME type dummy".format()]
-		step = ["sudo -S rmmod dummy".format()]
+		steps = [["sudo -S ip addr del {} $SANDBOX_IP_ADDRESS/24 brd + dev {} $SANDBOX_{} IFACE_NAME".format()],\
+			 	 ["sudo -S ip link delete {} $SANDBOX_{} IFACE_NAME type dummy".format()],\
+				 ["sudo -S rmmod dummy".format()]]
 
 	#Deletes the SANDBOX Interface
 	def del_iface2():
@@ -190,43 +258,43 @@ class CommandRunner():
 	#run this from the HOST
 	def setup_host_networking():
 		#Allow forwarding on HOST IFACE
-		step = ["sysctl -w net.ipv4.conf.$HOST_IF_NAME.forwarding=1".format()]
+		steps = [["sysctl -w net.ipv4.conf.$HOST_IF_NAME.forwarding=1".format()],\
 		#Allow from sandbox to outside
-		step = ["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()]
+				 ["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()],\
 		#Allow from outside to sandbox
-		step = ["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]
+				 ["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]]
 
 	#this is a seperate "computer", The following is in case you want to setup another
 	#virtual computer inside this one and allow to the outside
 	def sandbox_forwarding():
 		#Allow forwarding on Sandbox IFACE
-		step = ["sysctl -w net.ipv4.conf.{} $SANDBOX_{} IFACE_NAME.forwarding=1".format()]
+		steps = [["sysctl -w net.ipv4.conf.{} $SANDBOX_{} IFACE_NAME.forwarding=1".format()],\
 		#Allow forwarding on Host IFACE
 		#Allow from sandbox to outside
-		step = ["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()]
+				["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()],\
 		#Allow from outside to sandbox
-		step = ["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]
+				["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]]
 
 	#run this from the Host
 	def establish_network():
 		# 1. Delete all existing rules
-		step = ["iptables -F".format()]
-		# 2. Set default chain policies
-		step = ["iptables -P INPUT DROP".format()]
-		step = ["iptables -P FORWARD DROP".format()]
-		step = ["iptables -P OUTPUT DROP".format()]
+		steps = [["iptables -F"] ,\
+		 # 2. Set default chain policies
+		 		 ["iptables -P INPUT DROP"],\
+		 		 ["iptables -P FORWARD DROP"],\
+		 		 ["iptables -P OUTPUT DROP"],\
 		# 4. Allow ALL incoming SSH
-		step = ["iptables -A INPUT -i eth0 -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT".format()]
-		step = ["iptables -A OUTPUT -o eth0 -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT".format()]
+		         ["iptables -A INPUT -i eth0 -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT".format()],\
+		         ["iptables -A OUTPUT -o eth0 -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT".format()],\
 		# Allow incoming HTTPS
-		step = ["iptables -A INPUT -i eth0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT".format()]
-		step = ["iptables -A OUTPUT -o eth0 -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT".format()]
+		         ["iptables -A INPUT -i eth0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT".format()],\
+				 ["iptables -A OUTPUT -o eth0 -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT".format()],\
 		# 19. Allow MySQL connection only from a specic network
-		#iptables -A INPUT -i eth0 -p tcp -s 192.168.200.0/24 --dport 3306 -m state --state NEW,ESTABLISHED -j ACCEPT
-		#iptables -A OUTPUT -o eth0 -p tcp --sport 3306 -m state --state ESTABLISHED -j ACCEPT
+			     #iptables -A INPUT -i eth0 -p tcp -s 192.168.200.0/24 --dport 3306 -m state --state NEW,ESTABLISHED -j ACCEPT
+		         #iptables -A OUTPUT -o eth0 -p tcp --sport 3306 -m state --state ESTABLISHED -j ACCEPT
 		# 23. Prevent DoS attack
-		step = ["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT".format()]
+			     ["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT".format()]]
 
 
 if __name__ == "__main__":
-  do_the_thing()
+   "wat"
