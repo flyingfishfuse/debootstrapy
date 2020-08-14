@@ -143,6 +143,7 @@ if __name__ == "__main__":
 	arguments = parser.parse_args()
 
 #Set some variables
+
 class OSStuff:
 	def __init__(self):
 		self.script_cwd         = pathlib.Path().absolute()
@@ -181,29 +182,15 @@ class CommandRunner:
 	returns a subprocess.CompletedProcess object
 	EXITS ON ERROR!
 		'''
-		try:
-			#pass strings 
-			if shell_env == True:
-				try:
-					 = subprocess.Popen(command , shell=True)
-					if self.current_command.getstatusoutput() == None:
-						return self.current_command
-				except Exception as derp:
-					self.error_exit("[-] Shell Command failed! ",derp)			
-			#pass list
-			else:
-				try:
-					self.current_command = subprocess.run(command , shell=False)
-					return self.current_command
-				except Exception as derp:
-					self.error_exit("[-] Shell Command failed! ",derp)
-			#process completed, now do error checking
-			if self.current_command.CompletedProcess:
-				if self.current_command.SubprocessError:
-					pass
-		
-		except Exception as derp:
-					print(derp)
+		#pass strings 
+		if shell_env == True:
+			try:
+				step = subprocess.Popen(command , shell=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				output, error = step.communicate()
+				if step == subprocess.CompletedProcess:
+					
+			except Exception as derp:
+				self.error_exit("[-] Shell Command failed! ", derp)		
 
 	def stage1(self):
 		'''
