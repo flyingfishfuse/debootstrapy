@@ -171,7 +171,6 @@ class OSStuff:
 if __name__ == "__main__":
 	OSVars = OSStuff()
 
-
 class CommandRunner:
 	def __init__(self, sand_hostname, user, password ,\
 				 extra, sand_mac, sand_ip,sand_iface ,\
@@ -179,6 +178,7 @@ class CommandRunner:
 				 repository, components, log_file    ,\
 				 host_iface, internal_ip, gateway    ):
 		self.current_command  = subprocess
+        self.bit_size         = "64"
 		self.sandbox_hostname = sand_hostname 
 		self.user             = user
 		self.password         = password
@@ -226,9 +226,98 @@ class CommandRunner:
 			elif blocking == False:
 				# TODO: not implemented yet
 				pass	
-	
 		except Exception as derp:
 			self.error_exit("[-] Shell Command failed! ", derp)
+
+    def setup_disk():
+        # This creates the basic disk structure of an EFI disk with a single OS.
+        # You CAN boot .ISO Files from the persistance partition if you mount in GRUB2 
+        ## EFI
+        steps = ["parted /dev/$WANNABE_LIVE_DISK --script mkpart EFI fat16 1MiB 100MiB" ,\
+        ## LIVE disk partition   
+        "parted /dev/$WANNABE_LIVE_DISK --script mkpart live fat16 100MiB 3GiB" ,\
+        ## Persistance Partition
+        "parted /dev/$WANNABE_LIVE_DISK --script mkpart persistence ext4 3GiB 100%" ,\  
+        ## Sets filesystem flag
+        "parted /dev/$WANNABE_LIVE_DISK --script set 1 msftdata on" ,\
+        ## Sets boot flag for legacy (NON-EFI) BIOS
+        "parted /dev/$WANNABE_LIVE_DISK --script set 2 legacy_boot on" ,\
+        "parted /dev/$WANNABE_LIVE_DISK --script set 2 msftdata on" ,\
+        # Here we make the filesystems for the OS to live on
+        ## EFI
+        "mkfs.vfat -n EFI /dev/{$WANNABE_LIVE_DISK}1" ,\
+        ## LIVE disk partition
+        "mkfs.vfat -n LIVE /dev/{$WANNABE_LIVE_DISK}2" ,\
+        ## Persistance Partition
+        "mkfs.ext4 -F -L persistence /dev/{$WANNABE_LIVE_DISK}3" ,\
+        # Creating Temporary work directories
+        "mkdir /tmp/usb-efi /tmp/usb-live /tmp/usb-persistence /tmp/live-iso" ,\
+        # Mounting those directories on the newly created filesystem
+        "mount /dev/$WANNABE_LIVE_DISK /tmp/usb-efi" ,\
+        "mount /dev/$WANNABE_LIVE_DISK /tmp/usb-live" ,\
+        "mount /dev/$WANNABE_LIVE_DISK /tmp/usb-persistence" ,\
+        # Mount the ISO on a temp folder to get the files moved
+        "mount -oro live.iso /tmp/live-iso" ,\
+        "cp -ar /tmp/live-iso/* /tmp/usb-live" ,\
+        # IMPORTANT! This establishes persistance! UNION is a special mounting option 
+        # https://unix.stackexchange.com/questions/282393/union-mount-on-linux
+        'echo "/ union" > /tmp/usb-persistence/persistence.conf'] 
+        # Install GRUB2
+        # https://en.wikipedia.org/wiki/GNU_GRUB
+        ## Script supported targets: arm64-efi, x86_64-efi, , i386-efi
+        # TODO : Install 32bit brub2 then 64bit brub2 then `update-grub`
+        #        So's we can install 32 bit OS to live disk.
+        #########################
+        ##      64-BIT OS       #
+        #########################
+        if self.bit_size = "32":    
+            if self.arch == "ARM":
+                greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}") 
+                self.current_command = "grub-install --removable --target=arm-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK "
+                stepper = self.exec_command(self.current_command)
+                if stepper.returncode == 1:
+                    greenprint("[+] GRUB2 Install Finished Successfully!")
+	            else
+    	            error_exit("[-]GRUB2 Install Failed! Check the logfile!", derp)
+            elif self.arch == "x86""
+                greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}")
+                step = "grub-install --removable --target=i386-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK "
+                if stepper.returncode == 1:
+	                cecho "[+] GRUB2 Install Finished Successfully!" lolcat
+	            else
+		            error_exit "[-]GRUB2 Install Failed! Check the logfile!" 1>&2 >> $LOGFILE
+	            fi
+        else if [$ARCH == "X64"]
+            cecho "[+] Installing GRUB2 for ${ARCH} to /dev/${WANNABE_LIVE_DISK}" yellow
+            grub-install --removable --target=X86_64-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev/$WANNABE_LIVE_DISK 
+                if [ "$?" = "0" ]; then
+	                cecho "[+] GRUB2 Install Finished Successfully!" lolcat
+	            else
+		            error_exit "[-]GRUB2 Install Failed! Check the logfile!" 1>&2 >> $LOGFILE
+	            fi
+        else
+            cecho "Something WIERD happened, Throw a banana and try again!"
+    
+    # Copy the MBR for syslinux booting of LIVE disk
+    dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/sdX
+    
+    # Install Syslinux
+    # https://wiki.syslinux.org/wiki/index.php?title=HowTos
+    syslinux --install /dev/${WANNABE_LIVE_DISK}2
+    mv /tmp/usb-live/isolinux /tmp/usb-live/syslinux
+    mv /tmp/usb-live/syslinux/isolinux.bin /tmp/usb-live/syslinux/syslinux.bin
+    mv /tmp/usb-live/syslinux/isolinux.cfg /tmp/usb-live/syslinux/syslinux.cfg
+
+    # Magic, sets up syslinux configuration and layouts 
+    sed --in-place 's#isolinux/splash#syslinux/splash#' /tmp/usb-live/boot/grub/grub.cfg
+    sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' /tmp/usb-live/boot/grub/grub.cfg /tmp/usb-live/syslinux/menu.cfg
+    sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' /tmp/usb-live/boot/grub/grub.cfg /tmp/usb-live/syslinux/menu.cfg
+    sed --in-place 's#isolinux/splash#syslinux/splash#' /tmp/usb-live/boot/grub/grub.cfg
+    
+    # Clean up!
+    umount /tmp/usb-efi /tmp/usb-live /tmp/usb-persistence /tmp/live-iso
+    rmdir /tmp/usb-efi /tmp/usb-live /tmp/usb-persistence /tmp/live-iso
+
 
 	def stage1(self):
 		'''
@@ -279,7 +368,7 @@ class CommandRunner:
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
-			error_exit("[-]Mount Failed! Check the logle!")
+			error_exit("[-]Mount Failed! Check the logfile!")
 		# /proc
 		print("[+] Mounting /proc")
 
@@ -289,7 +378,7 @@ class CommandRunner:
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
-			error_exit("[-]Mount Failed! Check the logle!")
+			error_exit("[-]Mount Failed! Check the logfile!")
 
 #######################################
 		# /sys
@@ -316,9 +405,9 @@ class CommandRunner:
 		- installs extras
 
 		'''
-		steps = [["sudo chroot {} ".format(self.sandy_path)]						,\
+		steps = [["sudo chroot {} ".format(self.sandy_path)]						        ,\
 				 ["useradd {}".format(self.user)]											,\
-				 ["passwd  {}".format(self.password)]											,\
+				 ["passwd  {}".format(self.password)]										,\
 				 ["login {}".format(self.user)]												,\
 				 ["sudo -S apt-get update"]													,\
 				 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]	,\
@@ -328,13 +417,16 @@ class CommandRunner:
 				 #["sudo -S apt-get install locales dialog"]									,\
 		#sudo -S locale-gen en_US.UTF-8  # or your preferred locale
 		#tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
+        for instruction in steps:
+            self.current_command = instruction
+            self.exec_command(self.current_command)
 
 	#begin setting up services
 	def deboot_third_stage(self):
 		'''
 	Installs extra user packages
 		'''
-		self.current_command = ["sudo -S apt install {}".format(self.extra_packages)]
+        steps = ["sudo -S apt install {}".format(self.extra_packages)]
 
 	#Makes an interface with iproute1
 	def create_iface_ipr1(self, internal_interface, external_interface):
@@ -342,19 +434,27 @@ class CommandRunner:
 				 ["sudo -S ip link set {} dev dummy0".format(self.sand_iface)] ,\
 				 ["sudo -S ifcong {} hw ether {}".format(\
 					self.sand_iface, self.sand_mac)]]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 	#Makes an interface with iproute2
 	def create_iface_ipr2(self):
 		steps = ["ip link add {} type veth".format(self.sand_iface)]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 	def del_iface1(self):
 		steps = [["sudo -S ip addr del {}{} brd + dev {}".format(self.sand_ip,self.sandy_netmask,self.sand_iface)],\
 			 	 ["sudo -S ip link delete {} $SANDBOX_{} IFACE_NAME type dummy".format()],\
 				 ["sudo -S rmmod dummy".format()]]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 	#Deletes the SANDBOX Interface
 	def del_iface2(self):
-		ssteps = ["ip link del {} $SANDBOX_{} IFACE_NAME".format()]
+		steps = ["ip link del {} $SANDBOX_{} IFACE_NAME".format()]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 	#run this from the HOST
 	def setup_host_networking(self):
@@ -364,6 +464,8 @@ class CommandRunner:
 				 ["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()],\
 		#Allow from outside to sandbox
 				 ["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 	#this is a seperate "computer", The following is in case you want to setup another
 	#virtual computer inside this one and allow to the outside
@@ -375,6 +477,8 @@ class CommandRunner:
 				["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()],\
 		#Allow from outside to sandbox
 				["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 	#run this from the Host
 	def establish_network(self):
@@ -385,17 +489,18 @@ class CommandRunner:
 		 		 ["iptables -P FORWARD DROP"],\
 		 		 ["iptables -P OUTPUT DROP"],\
 		# 4. Allow ALL incoming SSH
-		         ["iptables -A INPUT -i eth0 -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT".format()],\
-		         ["iptables -A OUTPUT -o eth0 -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT".format()],\
+		         ["iptables -A INPUT -i eth0 -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT"],\
+		         ["iptables -A OUTPUT -o eth0 -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT"],\
 		# Allow incoming HTTPS
-		         ["iptables -A INPUT -i eth0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT".format()],\
-				 ["iptables -A OUTPUT -o eth0 -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT".format()],\
+		         ["iptables -A INPUT -i eth0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT"],\
+				 ["iptables -A OUTPUT -o eth0 -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT"],\
 		# 19. Allow MySQL connection only from a specic network
 			     #iptables -A INPUT -i eth0 -p tcp -s 192.168.200.0/24 --dport 3306 -m state --state NEW,ESTABLISHED -j ACCEPT
 		         #iptables -A OUTPUT -o eth0 -p tcp --sport 3306 -m state --state ESTABLISHED -j ACCEPT
 		# 23. Prevent DoS attack
-			     ["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT".format()]]
-
+			     ["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT"]]
+        for instruction in steps:
+            self.exec_command(instruction)
 
 if __name__ == "__main__":
 	arguments = parser.parse_args()
