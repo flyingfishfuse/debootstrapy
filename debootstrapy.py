@@ -246,7 +246,7 @@ class CommandRunner:
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 		    greenprint("[+] Debootstrap Finished Successfully!")
-		elif stepper.returncode == 0:
+		elif stepper.returncode == 1:
 			error_exit("[-]Debootstrap Failed! Check the logfile!")
 
 ############################################
@@ -255,7 +255,7 @@ class CommandRunner:
 		self.current_command = ["sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(self.sandy_path)]
 		stepper = self.exec_command(self.current_command)
 
-		if stepper.returncode == 0:
+		if stepper.returncode == 1:
 		    greenprint("[+] Resolv.conf copied!") 
 		else:
 			error_exit("[-]Copy Failed! Check the logle!")
@@ -265,7 +265,7 @@ class CommandRunner:
 		print("[+] Copying Sources.list")
 		self.current_command = ["sudo cp /etc/apt/sources.list {}/etc/apt/".format(self.sandy_path)]
 		stepper = self.exec_command(self.current_command)
-		if step.returncode == 0:
+		if stepper.returncode == 1:
 			print("[+] Sources.list copied!") 
 		else:
 			error_exit("[-]Copy Failed! Check the logfile!")
@@ -276,7 +276,7 @@ class CommandRunner:
 		print("[+] Mounting /dev" )
 		self.current_command = ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)]
 		stepper = self.exec_command(self.current_command)
-		if step.returncode == 0:
+		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
 			error_exit("[-]Mount Failed! Check the logle!")
@@ -286,7 +286,7 @@ class CommandRunner:
 ########################################
 		self.current_command = ["sudo mount -o bind -t proc /proc {}/proc".format(self.sandy_path)]
 		stepper = self.exec_command(self.current_command)
-		if step.returncode == 0:
+		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
 			error_exit("[-]Mount Failed! Check the logle!")
@@ -296,7 +296,7 @@ class CommandRunner:
 		print("[+] Mounting /sys")
 		self.current_command = ["sudo mount -o bind -t sys /sys {}/sys".format(self.sandy_path)]
 		stepper = self.exec_command(self.current_command)
-		if step.returncode == 0:
+		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
 			error_exit("[-]Mount Failed! Check the logle!")
@@ -307,6 +307,10 @@ class CommandRunner:
 		'''
 	Establishes Chroot
 		- sets username / password
+
+        - LOG'S IN, DONT LEAVE THE COMPUTER
+            -for security purposes
+
 		- updates packages
 		- installs debconf, nano, curl
 		- installs extras
@@ -314,7 +318,7 @@ class CommandRunner:
 		'''
 		steps = [["sudo chroot {} ".format(self.sandy_path)]						,\
 				 ["useradd {}".format(self.user)]											,\
-				 ["passwd  {}".format(self.user)]											,\
+				 ["passwd  {}".format(self.password)]											,\
 				 ["login {}".format(self.user)]												,\
 				 ["sudo -S apt-get update"]													,\
 				 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]	,\
@@ -335,13 +339,13 @@ class CommandRunner:
 	#Makes an interface with iproute1
 	def create_iface_ipr1(self, internal_interface, external_interface):
 		steps = [["sudo -S modprobe dummy"] ,\
-				 ["sudo -S ip link set {} {} IFACE_NAME dev dummy0".format(self.sand_iface, )] ,\
-				 ["sudo -S ifcong {} SANDBOX {} hw ether {}".format(\
+				 ["sudo -S ip link set {} dev dummy0".format(self.sand_iface)] ,\
+				 ["sudo -S ifcong {} hw ether {}".format(\
 					self.sand_iface, self.sand_mac)]]
 
 	#Makes an interface with iproute2
 	def create_iface_ipr2(self):
-		steps = ["ip link add {} $SANDBOX_{} IFACE_NAME type veth".format()]
+		steps = ["ip link add {} type veth".format(self.sand_iface)]
 
 	def del_iface1(self):
 		steps = [["sudo -S ip addr del {}{} brd + dev {}".format(self.sand_ip,self.sandy_netmask,self.sand_iface)],\
