@@ -33,12 +33,15 @@ debootstrapy - a python based linux tool for using debootstrap to make
 	Using only basic debian/linux/gnu tools
 
 	currently, only a single os on live usb is supported
+	
+	config file must be named "debootstrapy-config" and be in the same directory
 """
 import os
 import sys
 import pathlib
 import argparse
 import subprocess
+import configparser
 from io import BytesIO,StringIO
 
 __author__ = 'Adam Galindo'
@@ -68,8 +71,13 @@ yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.forma
 # preliminary scope stuff
 ###################################################################################
 if __name__ == "__main__":
-	
+
 	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
+	parser.add_argument('--use-config',
+                                 dest    = 'config_file',
+                                 action  = "bool" ,
+                                 default = "False" ,
+                                 help    = 'Use config file, if set to "True" will ignore other options' )
 	parser.add_argument('--user',
                                  dest    = 'user',
                                  action  = "store" ,
@@ -88,7 +96,7 @@ if __name__ == "__main__":
 	parser.add_argument('--sandbox-hostname',
                                  dest    = 'sand_hostname',
                                  action  = "store" ,
-                                 default = 'de:ad:be:ef:ca:fe' ,
+                                 default = 'sandbox' ,
                                  help    = "Hostname of the Sandbox" )
 	parser.add_argument('--sandbox-mac',
                                  dest    = 'sand_mac',
@@ -103,7 +111,7 @@ if __name__ == "__main__":
 	parser.add_argument('--sandbox-interface',
                                  dest    = 'sand_iface',
                                  action  = "store" ,
-                                 default = 'hakc1' ,
+                                 default = 'hack1' ,
                                  help    = "Interface name for the Sandbox" )
 	parser.add_argument('--sandbox-netmask',
                                  dest    = 'sandy_netmask',
@@ -151,6 +159,9 @@ if __name__ == "__main__":
                                  default = "192.168.0.1" ,
                                  help    = 'Network Gateway IP' )
 	arguments = parser.parse_args()
+	if arguments.config_file == True:
+		config = configparser.ConfigParser()
+		config.read('debootstrapy-config.ini')
 
 #Set some variables
 
@@ -182,7 +193,7 @@ class CommandRunner:
 		self.host_iface		  = arguments.host_iface
 		self.internal_ip	  = arguments.internal_ip
 		self.gateway		  = arguments.gateway
-		self.extras           = "wget debconf nano curl"
+		self.extras           = "debconf nano curl"
 		self.error_code_from_current_command = ""
 
 	def error_exit(self, message : str, exception : Exception):
@@ -192,7 +203,7 @@ class CommandRunner:
 	def exec_command(self, command, blocking = True, shell_env = True):
 		'''
 	returns a subprocess.CompletedProcess object
-	EXITS ON ERROR!
+	TODO: add logging
 		'''
 		#pass strings 
 		try:
@@ -207,12 +218,13 @@ class CommandRunner:
 				  greenprint(output_line)
 				for error_lines in herp[0].decode(encoding='utf-8').split('\n'):
 					greenprint(error_lines)
-					# if there are no errors
-				if step.returncode != 0:
-					yellow_bold_print("[+] Shell command executed without error")
+
+				return step.returncode
+				
 			elif blocking == False:
 				# TODO: not implemented yet
 				pass	
+	
 		except Exception as derp:
 			self.error_exit("[-] Shell Command failed! ", derp)
 
@@ -290,22 +302,32 @@ class CommandRunner:
 ###############################################################################
 		#finish setting up the basic system
 	def stage2(self):
+		'''
+	Establishes Chroot
+		- sets username / password
+		- updates packages
+		- installs debconf, nano, curl
+		- installs extras
+
+		'''
 		steps = [["sudo chroot {} ".format(self.sandy_path)]						,\
 				 ["useradd {}".format(self.user)]											,\
 				 ["passwd  {}".format(self.user)]											,\
 				 ["login {}".format(self.user)]												,\
 				 ["sudo -S apt-get update"]													,\
 				 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]	,\
-				#clean the gpg error messag
-				 ["sudo -S apt-get update"]													,\  
+				#TODO: clean the gpg error message
+				 ["sudo -S apt-get update"]													]#,\  
 				 #If you don't talk en_US
-				 ["sudo -S apt-get install locales dialog"]									,\
+				 #["sudo -S apt-get install locales dialog"]									,\
 		#sudo -S locale-gen en_US.UTF-8  # or your preferred locale
 		#tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
 
 	#begin setting up services
 	def deboot_third_stage(self):
-
+		'''
+	Installs extra user packages
+		'''
 		self.current_command = ["sudo -S apt install {}".format(self.extra_packages)]
 
 	#Makes an interface with iproute1
