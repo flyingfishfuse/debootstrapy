@@ -85,6 +85,11 @@ if __name__ == "__main__":
                                  action  = "store" ,
                                  default = 'micro' ,
                                  help    = "comma seperated list of extra packages to install" )
+	parser.add_argument('--sandbox-hostname',
+                                 dest    = 'sand_hostname',
+                                 action  = "store" ,
+                                 default = 'de:ad:be:ef:ca:fe' ,
+                                 help    = "Hostname of the Sandbox" )
 	parser.add_argument('--sandbox-mac',
                                  dest    = 'sand_mac',
                                  action  = "store" ,
@@ -95,11 +100,16 @@ if __name__ == "__main__":
                                  action  = "store" ,
                                  default = '192.168.0.3' ,
                                  help    = "IP Address of the Sandbox" )							
-	parser.add_argument('--sandbox-iface',
+	parser.add_argument('--sandbox-interface',
                                  dest    = 'sand_iface',
                                  action  = "store" ,
                                  default = 'hakc1' ,
                                  help    = "Interface name for the Sandbox" )
+	parser.add_argument('--sandbox-netmask',
+                                 dest    = 'sandy_netmask',
+                                 action  = "store" ,
+                                 default = '/24' ,
+                                 help    = 'Netmask for the sandbox in slash notation, e.g. "/24"' )
 	parser.add_argument('--sandbox-path',
                                  dest    = 'sandy_path',
                                  action  = "store" ,
@@ -125,7 +135,7 @@ if __name__ == "__main__":
                                  action  = "store" ,
                                  default = "'./debootstrap_log.txt'" ,
                                  help    = 'logfile name' )
-	parser.add_argument('--host_iface',
+	parser.add_argument('--host-interface',
                                  dest    = 'host_iface',
                                  action  = "store" ,
                                  default = "eth0" ,
@@ -135,7 +145,7 @@ if __name__ == "__main__":
                                  action  = "store" ,
                                  default = "192.168.0.1" ,
                                  help    = 'Host IP address on the chosen interface' )
-	parser.add_argument('--network_gateway',
+	parser.add_argument('--network-gateway',
                                  dest    = 'gateway',
                                  action  = "store" ,
                                  default = "192.168.0.1" ,
@@ -155,23 +165,25 @@ if __name__ == "__main__":
 
 class CommandRunner:
 	def __init__(self):
+		self.current_command  = subprocess
+		self.sandbox_hostname = argparse.sand_hostname 
+		self.user             = arguments.user
+		self.password         = arguments.password
+		self.extra_packages   = arguments.extra_extra
+		self.sand_mac         = arguments.sand_mac
+		self.sand_ip		  = arguments.sand_ip
+		self.sand_iface		  = arguments.sand_iface
+		self.sandy_netmask    = arguments.sandy_netmask
+		self.sandy_path		  = arguments.sandy_path
+		self.arch			  = arguments.arch
+		self.repository	 	  = arguments.repository
+		self.components       = arguments.components
+		self.log_file		  = arguments.log_file
+		self.host_iface		  = arguments.host_iface
+		self.internal_ip	  = arguments.internal_ip
+		self.gateway		  = arguments.gateway
+		self.extras           = "wget debconf nano curl"
 		self.error_code_from_current_command = ""
-		self.current_command = subprocess
-		self.user            = arguments.user
-		self.password        = arguments.password
-		self.extra           = arguments.extra_extra
-		self.sand_mac        = arguments.sand_mac
-		self.sand_ip		 = arguments.sand_ip
-		self.sand_iface		 = arguments.sand_iface
-		self.sandy_path		 = arguments.sandy_path
-		self.arch			 = arguments.arch
-		self.repository	 	 = arguments.repository
-		self.components      = arguments.components
-		self.log_file		 = arguments.log_file
-		self.host_iface		 = arguments.host_iface
-		self.internal_ip	 = arguments.internal_ip
-		self.gateway		 = arguments.gateway
-		self.extras          = "wget debconf nano curl"
 
 	def error_exit(self, message : str, exception : Exception):
 		redprint(message)
@@ -183,14 +195,15 @@ class CommandRunner:
 	EXITS ON ERROR!
 		'''
 		#pass strings 
-		if shell_env == True:
-			try:
-				step = subprocess.Popen(command , shell=True , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				output, error = step.communicate()
-				if step == subprocess.CompletedProcess:
-					
-			except Exception as derp:
-				self.error_exit("[-] Shell Command failed! ", derp)		
+		try:
+			step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			output, error = step.communicate()
+			herp = output.decode()
+			derp = error.decode()
+			if step == subprocess.CompletedProcess:
+				pass		
+		except Exception as derp:
+			self.error_exit("[-] Shell Command failed! ", derp)
 
 	def stage1(self):
 		'''
@@ -284,26 +297,27 @@ class CommandRunner:
 	#begin setting up services
 	def deboot_third_stage(self):
 
-		self.current_command = ["sudo -S apt install $EXTRA_PACKAGES".format()]
+		self.current_command = ["sudo -S apt install {}".format(self.extra_packages)]
 
 	#Makes an interface with iproute1
-	def create_iface_ipr1(self):
-		self.current_command = ["sudo -S modprobe dummy".format()]
-		self.current_command = ["sudo -S ip link set name {} $SANDBOX_{} IFACE_NAME dev dummy0".format()]
-		self.current_command = ["sudo -S ifcong {} $SANDBOX_{} IFACE_NAME hw ether {} $SANDBOX_MAC_ADDRESS".format()]
+	def create_iface_ipr1(self, internal_interface, external_interface):
+		steps = [["sudo -S modprobe dummy"] ,\
+				 ["sudo -S ip link set {} {} IFACE_NAME dev dummy0".format(self.sand_iface, )] ,\
+				 ["sudo -S ifcong {} SANDBOX {} hw ether {}".format(\
+					self.sand_iface, self.sand_mac)]]
 
 	#Makes an interface with iproute2
 	def create_iface_ipr2(self):
-		self.current_command = ["ip link add {} $SANDBOX_{} IFACE_NAME type veth".format()]
+		steps = ["ip link add {} $SANDBOX_{} IFACE_NAME type veth".format()]
 
 	def del_iface1(self):
-		steps = [["sudo -S ip addr del {} $SANDBOX_IP_ADDRESS/24 brd + dev {} $SANDBOX_{} IFACE_NAME".format()],\
+		steps = [["sudo -S ip addr del {}{} brd + dev {}".format(self.sand_ip,self.sandy_netmask,self.sand_iface)],\
 			 	 ["sudo -S ip link delete {} $SANDBOX_{} IFACE_NAME type dummy".format()],\
 				 ["sudo -S rmmod dummy".format()]]
 
 	#Deletes the SANDBOX Interface
 	def del_iface2(self):
-		self.current_command = ["ip link del {} $SANDBOX_{} IFACE_NAME".format()]
+		ssteps = ["ip link del {} $SANDBOX_{} IFACE_NAME".format()]
 
 	#run this from the HOST
 	def setup_host_networking(self):
