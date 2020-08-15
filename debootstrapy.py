@@ -87,6 +87,14 @@ if __name__ == "__main__":
                                  dest    = 'make_disk',
                                  action  = "store_true" ,
                                  help    = 'Makes new partitions , takes device name from fdisk -l' )
+    parser.add_argument('--use-iso',
+                                 dest    = 'use_live_iso',
+                                 action  = "store_true" ,
+                                 help    = 'Uses a Live ISO instead of a repository' )
+    parser.add_argument('--iso-name',
+                                 dest    = 'iso_name',
+                                 action  = "store" ,
+                                 help    = 'ISO to use, might need to be in same directory' )
     parser.add_argument('--user',
                                  dest    = 'user',
                                  action  = "store" ,
@@ -191,27 +199,28 @@ class CommandRunner:
                  sandy_netmask, sandy_path, arch     ,\
                  repository, components, log_file    ,\
                  host_iface, internal_ip, gateway    ,\
-                 livedisk_hwname):
-        self.current_command  = str
-        self.bit_size          = "64"
-        self.sandbox_hostname = sand_hostname 
-        self.user              = user
-        self.password          = password
-        self.extra_packages   = extra_extra
-        self.sand_mac          = sand_mac
-        self.sand_ip          = sand_ip
-        self.sand_iface          = sand_iface
-        self.sandy_netmask      = sandy_netmask
+                 livedisk_hwname, live_iso):
+        self.current_command     = str
+        self.bit_size            = "64"
+		self.live_iso            = live_iso
+        self.sandbox_hostname    = sand_hostname 
+        self.user                = user
+        self.password            = password
+        self.extra_packages      = extra_extra
+        self.sandy_mac            = sand_mac
+        self.sand_ip             = sand_ip
+        self.sandy_iface          = sand_iface
+        self.sandy_netmask       = sandy_netmask
         self.sandy_path          = sandy_path
-        self.arch              = arch
-        self.repository           = repository
-        self.components             = components
-        self.livedisk_hw_name = livedisk_hwname
-        self.log_file          = log_file
+        self.arch                = arch
+        self.repository          = repository
+        self.components          = components
+        self.livedisk_hw_name    = livedisk_hwname
+        self.log_file            = log_file
         self.host_iface          = host_iface
-        self.internal_ip      = internal_ip
-        self.gateway          = gateway
-        self.extras                 = "debconf nano curl"
+        self.internal_ip         = internal_ip
+        self.gateway             = gateway
+        self.extras              = "debconf nano curl"
         self.error_code_from_current_command = ""
         self.temp_dir         = '/tmp/new_disk'
         self.temp_boot_dir    = self.temp_dir + '/boot'
@@ -222,11 +231,11 @@ class CommandRunner:
 
     def error_exit(self, message : str, exception : Exception):
         redprint(message)
-        print(Exception.with_traceback)
+        print(exception.with_traceback)
+        sys.exit()
 
     def exec_command(self, command, blocking = True, shell_env = True):
         '''
-    returns a subprocess.CompletedProcess object
     TODO: add logging
         '''
         #pass strings 
@@ -259,30 +268,30 @@ class CommandRunner:
         ## EFI
         steps = ["parted /dev/{}--script mkpart EFI fat16 1MiB 100MiB".format(self.livedisk_hw_name) ,\
         ## LIVE disk partition   
-        "parted /dev/{}--script mkpart live fat16 100MiB 3GiB".format(self.livedisk_hw_name) ,\
-        ## Persistance Partition
+        "parted /dev/{}--script mkpart live fat16 100MiB 3GiB".format(self.livedisk_hw_name)     ,\
+        ## Persistance Partition                                                                 ,\
         "parted /dev/{}--script mkpart persistence ext4 3GiB 100%".format(self.livedisk_hw_name) ,\
-        ## Sets filesystem flag
-        "parted /dev/{}--script set 1 msftdata on".format(self.livedisk_hw_name) ,\
-        ## Sets boot flag for legacy (NON-EFI) BIOS
-        "parted /dev/{}--script set 2 legacy_boot on".format(self.livedisk_hw_name) ,\
-        "parted /dev/{}--script set 2 msftdata on".format(self.livedisk_hw_name) ,\
-        # Here we make the filesystems for the OS to live on
-        ## EFI
-        "mkfs.vfat -n EFI /dev/{}1".format(self.livedisk_hw_name) ,\
-        ## LIVE disk partition
-        "mkfs.vfat -n LIVE /dev/{}2".format(self.livedisk_hw_name) ,\
-        ## Persistance Partition
-        "mkfs.ext4 -F -L persistence /dev/{}3".format(self.livedisk_hw_name) ,\
+        ## Sets filesystem flag                                                                  ,\
+        "parted /dev/{}--script set 1 msftdata on".format(self.livedisk_hw_name)                 ,\
+        ## Sets boot flag for legacy (NON-EFI) BIOS                                              ,\
+        "parted /dev/{}--script set 2 legacy_boot on".format(self.livedisk_hw_name)              ,\
+        "parted /dev/{}--script set 2 msftdata on".format(self.livedisk_hw_name)                 ,\
+        # Here we make the filesystems for the OS to live on                                     ,\
+        ## EFI                                                                                   ,\
+        "mkfs.vfat -n EFI /dev/{}1".format(self.livedisk_hw_name)                                ,\
+        ## LIVE disk partition                                                                   ,\
+        "mkfs.vfat -n LIVE /dev/{}2".format(self.livedisk_hw_name)                               ,\
+        ## Persistance Partition                                                                 ,\
+        "mkfs.ext4 -F -L persistence /dev/{}3".format(self.livedisk_hw_name)                     ,\
         # Creating Temporary work directories
-        "mkdir /tmp/usb-efi /tmp/usb-live /tmp/usb-persistence /tmp/live-iso" ,\
-        # Mounting those directories on the newly created filesystem
-        "mount /dev/{}/tmp/usb-efi".format(self.livedisk_hw_name) ,\
-        "mount /dev/{}/tmp/usb-live".format(self.livedisk_hw_name) ,\
-        "mount /dev/{}/tmp/usb-persistence".format(self.livedisk_hw_name) ,\
-        # Mount the ISO on a temp folder to get the files moved
-        "mount -oro live.iso /tmp/live-iso".format(self.livedisk_hw_name) ,\
-        "cp -ar /tmp/live-iso/* /tmp/usb-live" ,\
+        "mkdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
+        # Mounting those directories on the newly created filesystem                      ,\
+        "mount /dev/{}1 {}".format(self.livedisk_hw_name,self.efi_dir )                   ,\
+        "mount /dev/{}2 {}".format(self.livedisk_hw_name, self.live_disk_dir)             ,\
+        "mount /dev/{}3 {}".format(self.livedisk_hw_name,self.persistance_dir)            ,\
+        # Mount the ISO on a temp folder to get the files moved                           ,\
+        "mount -oro {} {}".format(self.live_iso, self.live_iso_dir)                       ,\
+        "cp -ar /tmp/live-iso/* /tmp/usb-live".format(self.live_iso, self.live_iso_dir)   ,\
         # IMPORTANT! This establishes persistance! UNION is a special mounting option 
         # https://unix.stackexchange.com/questions/282393/union-mount-on-linux
         'echo "/ union" > /tmp/usb-persistence/persistence.conf'] 
@@ -307,38 +316,35 @@ class CommandRunner:
         if self.bit_size == "32":
             if self.arch == "arm":
                 greenprint("[+] Installing GRUB2 for {} to /dev/{}".format(self.arch, self.livedisk_hw_name)) 
-                self.current_command = "grub-install --removable --target=arm-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev{}".format(self.livedisk_hw_name)
+                self.current_command = "grub-install --removable --target=arm-efi --boot-directory={} --efi-directory={} /dev{}".format(\
+                                        self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
                 stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
                     greenprint("[+] GRUB2 Install Finished Successfully!")
                 else:
-                    error_exit("[-]GRUB2 Install Failed! Check the logfile!", derp)
+                    error_exit("[-]GRUB2 Install Failed! Check the logfile!", SystemError)
             elif self.arch == "x86":
-                greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/{}")
-                self.current_command = "grub-install --removable --target=i386-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev{}"
+                greenprint("[+] Installing GRUB2 for ${} to /dev/{}".format(self.arch, self.livedisk_hw_name))
+                self.current_command = "grub-install --removable --target=i386-efi --boot-directory={} --efi-directory={} /dev{}".format(\
+					                    self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
                 stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
                     greenprint("[+] GRUB2 Install Finished Successfully!")
                 else:
-                    error_exit("[-]GRUB2 Install Failed! Check the logfile!")
+                    error_exit("[-]GRUB2 Install Failed! Check the logfile!", SystemError)
             elif self.arch == "x64":
-                greenprint("[+] Installing GRUB2 for ${ARCH} to /dev/{}")
-                self.current_command = "grub-install --removable --target=X86_64-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev{}"
+                greenprint("[+] Installing GRUB2 for ${} to /dev/{}".format(self.arch, self.livedisk_hw_name))
+                self.current_command = "grub-install --removable --target=X86_64-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev{}".format(\
+					                    self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
                 stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
                     greenprint("[+] GRUB2 Install Finished Successfully!")
                 else:
-                    error_exit("[-]GRUB2 Install Failed! Check the logfile!")
+                    error_exit("[-]GRUB2 Install Failed! Check the logfile!", SystemError)
         else:
             greenprint("Something WIERD happened, Throw a banana and try again!")
     # Copy the MBR for syslinux booting of LIVE disk 
 	#TODO: set device name here
-	self.temp_dir         = '/tmp/new_disk'
-    self.temp_boot_dir    = self.temp_dir + '/boot'
-    self.efi_dir          = self.temp_dir + '/efi'
-    self.live_disk_dir    = self.temp_dir + '/live'
-    self.persistance_dir  = self.temp_dir + '/persistance'
-    self.live_iso_dir     = '/tmp/live-iso'
     steps = ["dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/sdX" ,\
     # Install Syslinux
     # https://wiki.syslinux.org/wiki/index.php?title=HowTos
@@ -351,11 +357,20 @@ class CommandRunner:
     "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir ) ,\
     "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir , self.live_disk_dir ) ,\
     "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir, self.live_disk_dir  ) ,\
-    "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir ) ,\
-    
+    "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir )]
+    stepper = self.exec_command(self.current_command)
+    if stepper.returncode == 1:
+        greenprint("[+] Syslinux Installed!") 
+    elif stepper.returncode != 1:
+        error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
     # Clean up!
-    "umount {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
-    "rmdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir)]
+    steps = ["umount {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
+    		 "rmdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir)]
+    stepper = self.exec_command(self.current_command)
+    if stepper.returncode == 1:
+        greenprint("[+] Syslinux Installed!") 
+    elif stepper.returncode != 1:
+        error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
 
     def stage1(self):
         '''
@@ -368,20 +383,19 @@ class CommandRunner:
         '''
         # Sequential commands
         greenprint("[+] Beginning Debootstrap")
-        self.current_command = ["sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
-                                                 self.components,self.arch,self.sandy_path,self.repository)]
+        self.current_command = "sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
+                                                 self.components,self.arch,self.sandy_path,self.repository)
         stepper = self.exec_command(self.current_command)
         if stepper.returncode == 1:
             greenprint("[+] Debootstrap Finished Successfully!")
-        elif stepper.returncode == 1:
+        elif stepper.returncode != 1:
             error_exit("[-]Debootstrap Failed! Check the logfile!")
 
 ############################################
         #resolv.conf copy
         greenprint("[+] Copying Resolv.conf")
-        self.current_command = ["sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(self.sandy_path)]
+        self.current_command = "sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(self.sandy_path)
         stepper = self.exec_command(self.current_command)
-
         if stepper.returncode == 1:
             greenprint("[+] Resolv.conf copied!") 
         else:
@@ -390,7 +404,7 @@ class CommandRunner:
 ##########################################
         # sources.list copy
         print("[+] Copying Sources.list")
-        self.current_command = ["sudo cp /etc/apt/sources.list {}/etc/apt/".format(self.sandy_path)]
+        self.current_command = "sudo cp /etc/apt/sources.list {}/etc/apt/".format(self.sandy_path)
         stepper = self.exec_command(self.current_command)
         if stepper.returncode == 1:
             print("[+] Sources.list copied!") 
@@ -401,7 +415,7 @@ class CommandRunner:
         #mount and bind the proper volumes
         # /dev
         print("[+] Mounting /dev" )
-        self.current_command = ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)]
+        self.current_command = "sudo mount -o bind /dev {}/dev".format(self.sandy_path)
         stepper = self.exec_command(self.current_command)
         if stepper.returncode == 1:
             print("[+] Mounted!") 
@@ -469,23 +483,23 @@ class CommandRunner:
     #Makes an interface with iproute1
     def create_iface_ipr1(self, internal_interface, external_interface):
         steps = [["sudo -S modprobe dummy"] ,\
-                 ["sudo -S ip link set {} dev dummy0".format(self.sand_iface)] ,\
+                 ["sudo -S ip link set {} dev dummy0".format(self.sandy_iface)] ,\
                  ["sudo -S ifconfig {} hw ether {}".format(\
-                    self.sand_iface, self.sand_mac)]]
+                    self.sandy_iface, self.sandy_mac)]]
         for instruction in steps:
             self.current_command = instruction
             stepper = self.exec_command(self.current_command)
 
     #Makes an interface with iproute2
     def create_iface_ipr2(self):
-        steps = ["ip link add {} type veth".format(self.sand_iface)]
+        steps = ["ip link add {} type veth".format(self.sandy_iface)]
         for instruction in steps:
             self.current_command = instruction
             stepper = self.exec_command(self.current_command)
 
     def del_iface1(self):
-        steps = [["sudo -S ip addr del {} brd + dev {}".format(self.sand_ip,self.sandy_netmask,self.sand_iface)],\
-                  ["sudo -S ip link delete {} type dummy".format(self.sand_iface)],\
+        steps = [["sudo -S ip addr del {} brd + dev {}".format(self.sand_ip,self.sandy_netmask,self.sandy_iface)],\
+                  ["sudo -S ip link delete {} type dummy".format(self.sandy_iface)],\
                  ["sudo -S rmmod dummy".format()]]
         for instruction in steps:
             self.current_command = instruction
@@ -493,7 +507,7 @@ class CommandRunner:
 
     #Deletes the SANDBOX Interface
     def del_iface2(self):
-        steps = ["ip link del {}".format(self.sand_iface)]
+        steps = ["ip link del {}".format(self.sandy_iface)]
         for instruction in steps:
             self.current_command = instruction
             stepper = self.exec_command(self.current_command)
@@ -503,9 +517,9 @@ class CommandRunner:
         #Allow forwarding on HOST IFACE
         steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(self.host_iface)],\
         #Allow from sandbox to outside
-                 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.sand_iface, self.host_iface)],\
+                 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.sandy_iface, self.host_iface)],\
         #Allow from outside to sandbox
-                 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface, self.sand_iface)]]
+                 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface, self.sandy_iface)]]
         for instruction in steps:
             self.current_command = instruction
             stepper = self.exec_command(self.current_command)
@@ -514,12 +528,12 @@ class CommandRunner:
     #virtual computer inside this one and allow to the outside
     def sandbox_forwarding(self):
         #Allow forwarding on Sandbox IFACE
-        steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(self.sand_iface)],\
+        steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(self.sandy_iface)],\
         #Allow forwarding on Host IFACE
         #Allow from sandbox to outside
-                ["iptables -A FORWARD -i {} -o -j ACCEPT".format(self.sand_iface, self.host_iface)],\
+                ["iptables -A FORWARD -i {} -o -j ACCEPT".format(self.sandy_iface, self.host_iface)],\
         #Allow from outside to sandbox
-                ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface,self.sand_iface)]]
+                ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface,self.sandy_iface)]]
         for instruction in steps:
             self.current_command = instruction
             stepper = self.exec_command(self.current_command)
@@ -576,4 +590,5 @@ if __name__ == "__main__":
                       arguments.log_file,    arguments.host_iface      ,\
                       arguments.internal_ip, arguments.gateway      ,\
                       "debconf nano curl")
-        if arguments.
+        if arguments.make_disk == True:
+			thing_to_do.
