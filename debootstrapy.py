@@ -202,14 +202,14 @@ class CommandRunner:
                  livedisk_hwname, live_iso):
         self.current_command     = str
         self.bit_size            = "64"
-		self.live_iso            = live_iso
+        self.live_iso            = live_iso
         self.sandbox_hostname    = sand_hostname 
         self.user                = user
         self.password            = password
         self.extra_packages      = extra_extra
-        self.sandy_mac            = sand_mac
-        self.sand_ip             = sand_ip
-        self.sandy_iface          = sand_iface
+        self.sandy_mac           = sand_mac
+        self.sandy_ip            = sand_ip
+        self.sandy_iface         = sand_iface
         self.sandy_netmask       = sandy_netmask
         self.sandy_path          = sandy_path
         self.arch                = arch
@@ -233,10 +233,18 @@ class CommandRunner:
         redprint(message)
         print(exception.with_traceback)
         sys.exit()
+	
+    def stepper(self, list_of_commands):
+        try:
+            for instruction in list_of_commands:
+                self.current_command = instruction
+                stepper = self.exec_command(self.current_command)
+        except Exception as derp:
+            error_exit()
 
-    def exec_command(self, command, blocking = True, shell_env = True):
+	def exec_command(self, command, blocking = True, shell_env = True):
         '''
-    TODO: add logging
+    	TODO: add logging
         '''
         #pass strings 
         try:
@@ -305,11 +313,14 @@ class CommandRunner:
             except Exception as derp:
                 error_exit("[-] Disk Formatting Failed! Check the logfile!", derp)
 
-        # Install GRUB2
-        # https://en.wikipedia.org/wiki/GNU_GRUB
-        ## Script supported targets: arm64-efi, x86_64-efi, , i386-efi
-        # TODO : Install 32bit brub2 then 64bit brub2 then `update-grub`
-        #        So's we can install 32 bit OS to live disk.
+    def install_grub2(self):
+        '''
+         Install GRUB2
+         https://en.wikipedia.org/wiki/GNU_GRUB
+         Script supported targets: arm64-efi, x86_64-efi, , i386-efi
+        TODO : Install 32bit brub2 then 64bit brub2 then `update-grub`
+               So's we can install 32 bit OS to live disk.
+        '''
         #########################
         ##      64-BIT OS       #
         #########################
@@ -326,7 +337,7 @@ class CommandRunner:
             elif self.arch == "x86":
                 greenprint("[+] Installing GRUB2 for ${} to /dev/{}".format(self.arch, self.livedisk_hw_name))
                 self.current_command = "grub-install --removable --target=i386-efi --boot-directory={} --efi-directory={} /dev{}".format(\
-					                    self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
+                                        self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
                 stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
                     greenprint("[+] GRUB2 Install Finished Successfully!")
@@ -334,8 +345,8 @@ class CommandRunner:
                     error_exit("[-]GRUB2 Install Failed! Check the logfile!", SystemError)
             elif self.arch == "x64":
                 greenprint("[+] Installing GRUB2 for ${} to /dev/{}".format(self.arch, self.livedisk_hw_name))
-                self.current_command = "grub-install --removable --target=X86_64-efi --boot-directory=/tmp/usb-live/boot/ --efi-directory=/tmp/usb-efi /dev{}".format(\
-					                    self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
+                self.current_command = "grub-install --removable --target=X86_64-efi --boot-directory={} --efi-directory={} /dev{}".format(\
+                                        self.temp_boot_dir, self.efi_dir, self.livedisk_hw_name)
                 stepper = self.exec_command(self.current_command)
                 if stepper.returncode == 1:
                     greenprint("[+] GRUB2 Install Finished Successfully!")
@@ -343,34 +354,36 @@ class CommandRunner:
                     error_exit("[-]GRUB2 Install Failed! Check the logfile!", SystemError)
         else:
             greenprint("Something WIERD happened, Throw a banana and try again!")
-    # Copy the MBR for syslinux booting of LIVE disk 
-	#TODO: set device name here
-    steps = ["dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/sdX" ,\
-    # Install Syslinux
-    # https://wiki.syslinux.org/wiki/index.php?title=HowTos
-    "syslinux --install /dev/{}2".format(self.livedisk_hw_name) ,\
-    "mv {}/isolinux {}/syslinux".format(self.live_disk_dir ,self.live_disk_dir) ,\
-    "mv {}/syslinux/isolinux.bin {}/syslinux/syslinux.bin".format(self.live_disk_dir ,self.live_disk_dir ) ,\
-    "mv {}/syslinux/isolinux.cfg {}/syslinux/syslinux.cfg".format(self.live_disk_dir ,self.live_disk_dir ) ,\
+    
+    def install_syslinux(self):
+        # Copy the MBR for syslinux booting of LIVE disk 
+        #TODO: set device name here
+        steps = ["dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/sdX" ,\
+        # Install Syslinux
+        # https://wiki.syslinux.org/wiki/index.php?title=HowTos
+        "syslinux --install /dev/{}2".format(self.livedisk_hw_name) ,\
+        "mv {}/isolinux {}/syslinux".format(self.live_disk_dir ,self.live_disk_dir) ,\
+        "mv {}/syslinux/isolinux.bin {}/syslinux/syslinux.bin".format(self.live_disk_dir ,self.live_disk_dir ) ,\
+        "mv {}/syslinux/isolinux.cfg {}/syslinux/syslinux.cfg".format(self.live_disk_dir ,self.live_disk_dir ) ,\
 
-    # Magic, sets up syslinux configuration and layouts 
-    "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir ) ,\
-    "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir , self.live_disk_dir ) ,\
-    "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir, self.live_disk_dir  ) ,\
-    "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir )]
-    stepper = self.exec_command(self.current_command)
-    if stepper.returncode == 1:
-        greenprint("[+] Syslinux Installed!") 
-    elif stepper.returncode != 1:
-        error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
-    # Clean up!
-    steps = ["umount {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
-    		 "rmdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir)]
-    stepper = self.exec_command(self.current_command)
-    if stepper.returncode == 1:
-        greenprint("[+] Syslinux Installed!") 
-    elif stepper.returncode != 1:
-        error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
+        # Magic, sets up syslinux configuration and layouts 
+        "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir ) ,\
+        "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir , self.live_disk_dir ) ,\
+        "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir, self.live_disk_dir  ) ,\
+        "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir )]
+        stepper = self.exec_command(self.current_command)
+        if stepper.returncode == 1:
+            greenprint("[+] Syslinux Installed!") 
+        elif stepper.returncode != 1:
+            error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
+        # Clean up!
+        steps = ["umount {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
+                 "rmdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir)]
+        stepper = self.exec_command(self.current_command)
+        if stepper.returncode == 1:
+            greenprint("[+] Syslinux Installed!") 
+        elif stepper.returncode != 1:
+            error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
 
     def stage1(self):
         '''
@@ -498,7 +511,7 @@ class CommandRunner:
             stepper = self.exec_command(self.current_command)
 
     def del_iface1(self):
-        steps = [["sudo -S ip addr del {} brd + dev {}".format(self.sand_ip,self.sandy_netmask,self.sandy_iface)],\
+        steps = [["sudo -S ip addr del {} brd + dev {}".format(self.sandy_ip,self.sandy_netmask,self.sandy_iface)],\
                   ["sudo -S ip link delete {} type dummy".format(self.sandy_iface)],\
                  ["sudo -S rmmod dummy".format()]]
         for instruction in steps:
@@ -590,5 +603,6 @@ if __name__ == "__main__":
                       arguments.log_file,    arguments.host_iface      ,\
                       arguments.internal_ip, arguments.gateway      ,\
                       "debconf nano curl")
-        if arguments.make_disk == True:
-			thing_to_do.
+        if arguments.make_disk == True and (arguments.use_live_iso == True):
+
+            pass
