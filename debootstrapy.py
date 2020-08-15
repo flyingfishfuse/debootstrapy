@@ -332,25 +332,30 @@ class CommandRunner:
         else:
             greenprint("Something WIERD happened, Throw a banana and try again!")
     # Copy the MBR for syslinux booting of LIVE disk 
+	#TODO: set device name here
+	self.temp_dir         = '/tmp/new_disk'
+    self.temp_boot_dir    = self.temp_dir + '/boot'
+    self.efi_dir          = self.temp_dir + '/efi'
+    self.live_disk_dir    = self.temp_dir + '/live'
+    self.persistance_dir  = self.temp_dir + '/persistance'
+    self.live_iso_dir     = '/tmp/live-iso'
     steps = ["dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/sdX" ,\
-    
-
     # Install Syslinux
     # https://wiki.syslinux.org/wiki/index.php?title=HowTos
-    "syslinux --install /dev/{}2" ,\
-    "mv /tmp/usb-live/isolinux /tmp/usb-live/syslinux" ,\
-    "mv /tmp/usb-live/syslinux/isolinux.bin /tmp/usb-live/syslinux/syslinux.bin" ,\
-    "mv /tmp/usb-live/syslinux/isolinux.cfg /tmp/usb-live/syslinux/syslinux.cfg" ,\
+    "syslinux --install /dev/{}2".format(self.livedisk_hw_name) ,\
+    "mv {}/isolinux {}/syslinux".format(self.live_disk_dir ,self.live_disk_dir) ,\
+    "mv {}/syslinux/isolinux.bin {}/syslinux/syslinux.bin".format(self.live_disk_dir ,self.live_disk_dir ) ,\
+    "mv {}/syslinux/isolinux.cfg {}/syslinux/syslinux.cfg".format(self.live_disk_dir ,self.live_disk_dir ) ,\
 
     # Magic, sets up syslinux configuration and layouts 
-    "sed --in-place 's#isolinux/splash#syslinux/splash#' /tmp/usb-live/boot/grub/grub.cfg" ,\
-    "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' /tmp/usb-live/boot/grub/grub.cfg /tmp/usb-live/syslinux/menu.cfg" ,\
-    "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' /tmp/usb-live/boot/grub/grub.cfg /tmp/usb-live/syslinux/menu.cfg" ,\
-    "sed --in-place 's#isolinux/splash#syslinux/splash#' /tmp/usb-live/boot/grub/grub.cfg" ,\
+    "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir ) ,\
+    "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir , self.live_disk_dir ) ,\
+    "sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(self.live_disk_dir, self.live_disk_dir  ) ,\
+    "sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(self.live_disk_dir ) ,\
     
     # Clean up!
-    "umount /tmp/usb-efi /tmp/usb-live /tmp/usb-persistence /tmp/live-iso" ,\
-    "rmdir /tmp/usb-efi /tmp/usb-live /tmp/usb-persistence /tmp/live-iso"]
+    "umount {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
+    "rmdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir)]
 
     def stage1(self):
         '''
@@ -438,14 +443,14 @@ class CommandRunner:
         - installs extras
 
         '''
-        steps = [["sudo chroot {} ".format(self.sandy_path)]                                    ,\
-                 ["useradd {}".format(self.user)]                                               ,\
-                 ["passwd  {}".format(self.password)]                                           ,\
-                 ["login {}".format(self.user)]                                                 ,\
-                 ["sudo -S apt-get update"]                                                     ,\
-                 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]     ,\
+        steps = [["sudo chroot {} ".format(self.sandy_path)]                                ,\
+                 ["useradd {}".format(self.user)]                                            ,\
+                 ["passwd  {}".format(self.password)]                                        ,\
+                 ["login {}".format(self.user)]                                                ,\
+                 ["sudo -S apt-get update"]                                                    ,\
+                 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]    ,\
                 #TODO: clean the gpg error message
-                 ["sudo -S apt-get update"]                                                     ]#,\  
+                 ["sudo -S apt-get update"]                                                    ]#,\  
                  #If you don't talk en_US
                  #["sudo -S apt-get install locales dialog"]                                    ,\
         #sudo -S locale-gen en_US.UTF-8  # or your preferred locale
@@ -509,12 +514,12 @@ class CommandRunner:
     #virtual computer inside this one and allow to the outside
     def sandbox_forwarding(self):
         #Allow forwarding on Sandbox IFACE
-        steps = [["sysctl -w net.ipv4.conf.{} $SANDBOX_{} IFACE_NAME.forwarding=1".format()],\
+        steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(self.sand_iface)],\
         #Allow forwarding on Host IFACE
         #Allow from sandbox to outside
-                ["iptables -A FORWARD -i {} $SANDBOX_{} IFACE_NAME -o $HOST_{} IFACE_NAME -j ACCEPT".format()],\
+                ["iptables -A FORWARD -i {} -o -j ACCEPT".format(self.sand_iface, self.host_iface)],\
         #Allow from outside to sandbox
-                ["iptables -A FORWARD -i $HOST_{} IFACE_NAME -o {} $SANDBOX_{} IFACE_NAME -j ACCEPT".format()]]
+                ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface,self.sand_iface)]]
         for instruction in steps:
             self.current_command = instruction
             stepper = self.exec_command(self.current_command)
@@ -563,12 +568,12 @@ if __name__ == "__main__":
             redprint("[-] Option not in config file")
     elif arguments.config_file == False:
         thing_to_do = CommandRunner(arguments.sand_hostname ,arguments.user       ,\
-                      arguments.password,    arguments.extra_extra                ,\
-                      arguments.sand_mac,    arguments.sand_ip                    ,\
-                      arguments.sand_iface, arguments.sandy_netmask               ,\
-                      arguments.sandy_path, arguments.arch                        ,\
-                      arguments.repository, arguments.components                  ,\
-                      arguments.log_file,    arguments.host_iface                 ,\
-                      arguments.internal_ip, arguments.gateway                    ,\
+                      arguments.password,    arguments.extra_extra     ,\
+                      arguments.sand_mac,    arguments.sand_ip         ,\
+                      arguments.sand_iface, arguments.sandy_netmask ,\
+                      arguments.sandy_path, arguments.arch          ,\
+                      arguments.repository, arguments.components    ,\
+                      arguments.log_file,    arguments.host_iface      ,\
+                      arguments.internal_ip, arguments.gateway      ,\
                       "debconf nano curl")
         if arguments.
