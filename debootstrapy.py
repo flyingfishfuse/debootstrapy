@@ -27,18 +27,17 @@
 ####
 ################################################################################
 """
-debootstrapy - a python based linux tool for using debootstrap to make 
-	a networked, debian based, sandbox OR a live image with persistance
-
-	Using only basic debian/linux/gnu tools
+debootstrapy:
+    - infrastructure that allows for running bash scripts with python
+ 
+    - python based linux tool for using debootstrap to make a networked
+        debian based, sandbox OR a live image with persistance
+        Using only basic debian/linux/gnu tools
 
 	currently, only a single os on live usb is supported
 	
-	config file must be named "debootstrapy-config" and be in the same directory
+	config file must be named "debootstrapy.config" and be in the same directory
 
-	I know it can be refactored, It is not going to be because this is a script
-	that steps through a sequential list of operations that may be modified
-	easily without confusion
 """
 import os
 import sys
@@ -429,15 +428,15 @@ def thing_to_do(self, params):
 			elif exec_pool.returncode != 1:
 				error_exit("[-]Syslinux Install Failed! Check the logfile!", SystemError)
 			# Clean up!
-			steps = ["umount {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir) ,\
-					 "rmdir {} {} {} {}".format(self.efi_dir, self.live_disk_dir ,self.persistance_dir, self.live_iso_dir)]
+			steps = ["umount {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, live_iso_dir) ,\
+					 "rmdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, live_iso_dir)]
 			exec_pool = self.stepper(steps)
 			if exec_pool.returncode == 1:
 				greenprint("[+] Syslinux Installed!") 
 			elif stepper.returncode != 1:
 				error_exit("[-]Debootstrap Failed! Check the logfile!", SystemError)
 
-	def stage1(self):
+	def stage1(self, arch, sandy_path, components, repository):
 		'''
 	Stage 1 :
 		- sets up base files/directory's
@@ -449,7 +448,7 @@ def thing_to_do(self, params):
 		# Sequential commands
 		greenprint("[+] Beginning Debootstrap")
 		self.current_command = "sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
-												 self.components,self.arch,self.sandy_path,self.repository)
+												 components,arch,sandy_path,repository)
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 			greenprint("[+] Debootstrap Finished Successfully!")
@@ -459,12 +458,12 @@ def thing_to_do(self, params):
 ############################################
 		#resolv.conf copy
 		greenprint("[+] Copying Resolv.conf")
-		self.current_command = "sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(self.sandy_path)
+		self.current_command = "sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(sandy_path)
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 			greenprint("[+] Resolv.conf copied!") 
 		else:
-			error_exit("[-]Copy Failed! Check the logle!")
+			error_exit("[-]Copying Resolv.conf Failed! Check the logfile!")
 
 ##########################################
 		# sources.list copy
@@ -474,7 +473,7 @@ def thing_to_do(self, params):
 		if stepper.returncode == 1:
 			print("[+] Sources.list copied!") 
 		else:
-			error_exit("[-]Copy Failed! Check the logfile!")
+			error_exit("[-]Copying Sources.list Failed! Check the logfile!")
 
 ##########################################
 		#mount and bind the proper volumes
@@ -485,7 +484,7 @@ def thing_to_do(self, params):
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
-			error_exit("[-]Mount Failed! Check the logfile!")
+			error_exit("[-]Mounting /dev Failed! Check the logfile!")
 		# /proc
 		print("[+] Mounting /proc")
 	
@@ -495,7 +494,7 @@ def thing_to_do(self, params):
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
-			error_exit("[-]Mount Failed! Check the logfile!")
+			error_exit("[-]Mounting /proc Failed! Check the logfile!")
 
 #######################################
 		# /sys
@@ -505,7 +504,7 @@ def thing_to_do(self, params):
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
-			error_exit("[-]Mount Failed! Check the logle!")
+			error_exit("[-]Mounting /sys Failed! Check the logle!")
 
 ###############################################################################
 		#finish setting up the basic system
