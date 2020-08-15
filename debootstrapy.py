@@ -31,10 +31,10 @@ debootstrapy:
 	- infrastructure that allows for running bash scripts with python
  
 	- python based linux tool for using debootstrap to make a networked
-		debian based, sandbox OR a live image with persistance
+		debian based, sandbox OR a live-usb image with persistance
 		Using only basic debian/linux/gnu tools
 
-	currently, only a single os on live usb is supported
+	currently, only a single os live-usb is supported
 	
 	config file must be named "debootstrapy.config" and be in the same directory
 
@@ -76,28 +76,30 @@ makeyellow = lambda text: Fore.YELLOW + ' ' +  text + ' ' + Style.RESET_ALL if (
 yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.format(text) + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
 ###################################################################################
 # Commandline Arguments
-# I guess we start at the top!
 ###################################################################################
+# If the user is running the program as a script we parse the arguments or use the 
+# config file. 
+# If the user is importing this as a module for usage as a command framework we do
+# not activate the argument or configuration file parsing engines
 if __name__ == "__main__":
-
-
 	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
 	parser.add_argument('--use-config',
 								 dest		= 'config_file',
-								 action	  = "store_true" ,
+								 action		= "store_true" ,
 								 help		= 'Use config file, if used, will ignore other options' )
 	parser.add_argument('--make-disk',
-								 dest	= 'make_disk',
-								 action  = "store_true" ,
-								 help	= 'Makes new partitions , takes device name from fdisk -l' )
+								 dest		= 'make_disk',
+								 action		= "store_true" ,
+								 help		= 'Makes new partitions and installs Grub2/syslinux, \
+									 		   takes device name from fdisk -l. Otherwise, makes a folder' )
 	parser.add_argument('--use-iso',
-								 dest	= 'use_live_iso',
-								 action  = "store_true" ,
-								 help	= 'Uses a Live ISO instead of a repository' )
+								 dest		= 'use_live_iso',
+								 action 	= "store_true" ,
+								 help		= 'Uses a Live ISO instead of a repository' )
 	parser.add_argument('--iso-name',
-								 dest	= 'iso_name',
-								 action  = "store" ,
-								 help	= 'ISO to use, might need to be in same directory' )
+								 dest		= 'iso_name',
+								 action		= "store" ,
+								 help		= 'ISO to use, might need to be in same directory' )
 	parser.add_argument('--user',
 								 dest	= 'user',
 								 action  = "store" ,
@@ -190,7 +192,7 @@ if __name__ == "__main__":
 
 class OSStuff:
 	def __init__(self):
-		self.script_cwd		 = pathlib.Path().absolute()
+		self.script_cwd		   = pathlib.Path().absolute()
 		self.script_osdir	   = pathlib.Path(__file__).parent.absolute() 
 
 if __name__ == "__main__":
@@ -225,8 +227,8 @@ def thing_to_do(self, params):
 				 sandy_netmask, sandy_path, arch	 ,\
 				 repository, components, log_file	,\
 				 host_iface, internal_ip, gateway	,\
-				 livedisk_hwname, live_iso, bit_size,\
-                 temp_dir, live_iso_dir):
+				 livedisk_hwname, file_source, bit_size,\
+                 temp_dir, file_source_dir):
 
 		self.current_command	 = str
 
@@ -250,15 +252,15 @@ def thing_to_do(self, params):
 		self.extras				= "debconf nano curl"
 		self.extra_packages		= extra_extra
 
-		self.live_iso			= live_iso
+		self.file_source		= file_source
 		self.livedisk_hw_name	= livedisk_hwname
 		self.error_code_from_current_command = ""
-		self.temp_dir			= temp_dir
+		self.temp_dir			= temp_dir            #/tmp
 		self.live_disk_dir		= self.temp_dir      + '/live'
 		self.temp_boot_dir		= self.live_disk_dir + '/boot'
 		self.efi_dir			= self.temp_dir      + '/efi'
 		self.persistance_dir	= self.temp_dir      + '/persistance'
-		self.live_iso_dir		= live_iso_dir
+		self.file_source_dir	= self.temp_dir + file_source_dir
 
 	def error_exit(self, message : str, exception : Exception):
 		redprint(message)
@@ -330,16 +332,16 @@ def thing_to_do(self, params):
 		else:
 			error_exit("[-] Disk Formatting Failed! Check the logfile!")
 
-	def move_system_files(self, efi_dir, live_disk_dir,persistance_dir,live_iso_dir):
+	def move_system_files(self, efi_dir, live_disk_dir,persistance_dir,file_source_dir):
 		# Creating Temporary work directories
-		steps = ["mkdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, live_iso_dir) ,\
+		steps = ["mkdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir) ,\
 		# Mounting those directories on the newly created filesystem					  ,\
 		"mount /dev/{}1 {}".format(diskname, efi_dir )				   ,\
 		"mount /dev/{}2 {}".format(diskname, live_disk_dir)			 ,\
 		"mount /dev/{}3 {}".format(diskname, persistance_dir)			,\
 		# Mount the ISO on a temp folder to get the files moved						   ,\
-		"mount -oro {} {}".format(live_iso, live_iso_dir)					   ,\
-		"cp -ar {}/* {}".format(live_iso_dir, live_disk_dir)					,\
+		"mount -oro {} {}".format(live_iso, file_source_dir)					   ,\
+		"cp -ar {}/* {}".format(file_source_dir, live_disk_dir)					,\
 		# IMPORTANT! This establishes persistance! UNION is a special mounting option 
 		# https://unix.stackexchange.com/questions/282393/union-mount-on-linux
 		'echo "/ union" > {}/persistence.conf'.format(persistance_dir)] 
@@ -403,7 +405,7 @@ def thing_to_do(self, params):
 		else:
 			greenprint("Something WIERD happened, Throw a banana and try again!")
 	
-	def install_syslinux(self, livedisk_hw_name, live_disk_dir, live_iso_dir, efi_dir, persistance_dir, ):
+	def install_syslinux(self, livedisk_hw_name, live_disk_dir, file_source_dir, efi_dir, persistance_dir, ):
 		# Copy the MBR for syslinux booting of LIVE disk 
 		try:
 			steps = ["dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/{}".format(livedisk_hw_name) ,\
@@ -429,8 +431,8 @@ def thing_to_do(self, params):
 			elif exec_pool.returncode != 1:
 				error_exit("[-]Syslinux Install Failed! Check the logfile!", SystemError)
 			# Clean up!
-			steps = ["umount {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, live_iso_dir) ,\
-					 "rmdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, live_iso_dir)]
+			steps = ["umount {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir) ,\
+					 "rmdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir)]
 			exec_pool = self.stepper(steps)
 			if exec_pool.returncode == 1:
 				greenprint("[+] Syslinux Installed!") 
@@ -587,23 +589,9 @@ def thing_to_do(self, params):
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
-	
-	#this is a seperate "computer", The following is in case you want to setup another
-	#virtual computer inside this one and allow to the outside
-	def sandbox_forwarding(self):
-		#Allow forwarding on Sandbox IFACE
-		steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(sandy_iface)],\
-		#Allow forwarding on Host IFACE
-		#Allow from sandbox to outside
-				["iptables -A FORWARD -i {} -o -j ACCEPT".format(sandy_iface, host_iface)],\
-		#Allow from outside to sandbox
-				["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface,self.sandy_iface)]]
-		for instruction in steps:
-			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
 
 	#run this from the Host
-	def establish_network(self):
+	def establish_iptables(self):
 		# 1. Delete all existing rules
 		steps = [["iptables -F"] ,\
 		 # 2. Set default chain policies
@@ -625,6 +613,8 @@ def thing_to_do(self, params):
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
 
+#call via terminal
+# you must specify either config or arguments
 if __name__ == "__main__":
 	arguments = parser.parse_args()
 	#are we using config?
@@ -654,6 +644,13 @@ if __name__ == "__main__":
 					  arguments.log_file,	arguments.host_iface	  ,\
 					  arguments.internal_ip, arguments.gateway	  ,\
 					  "debconf nano curl")
-		if arguments.make_disk == True and (arguments.use_live_iso == True):
-			thing_to_do.
+		if (arguments.make_disk == True) and (arguments.use_live_iso == True):
+			#TODO: should be a path.. or name?
+			thing_to_do.file_source = '/tmp/live.iso' # arguments.iso_name
+			thing_to_do.setup_disk(diskname="",efi_dir="",persistance_dir="",temp_boot_dir="",live_disk_dir="")
+			thing_to_do.move_system_files(efi_dir="",live_disk_dir="",persistance_dir="",file_source_dir="")
+			thing_to_do.install_grub2(bit_size="",arch="",livedisk_hw_name="",temp_boot_dir="",efi_dir="")
+			#syslinux for USB install
+			#thing_to_do.install_syslinux(livedisk_hw_name="",live_disk_dir="",file_source_dir="",efi_dir="",persistance_dir="")
+
 			pass
