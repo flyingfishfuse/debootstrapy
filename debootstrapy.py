@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 ################################################################################
-##			debootstrapy - a linux tool for using debootstrap			   ##
+##			debootstrapy - a linux tool for using debootstrap			      ##
 ################################################################################
-# Copyright (c) 2020 Adam Galindo											 ##
-#																			 ##
+# Copyright (c) 2020 Adam Galindo											  ##
+#																			  ##
 # Permission is hereby granted, free of charge, to any person obtaining a copy##
 # of this software and associated documentation files (the "Software"),to deal##
 # in the Software without restriction, including without limitation the rights##
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell   ##
-# copies of the Software, and to permit persons to whom the Software is	   ##
-# furnished to do so, subject to the following conditions:					##
-#																			 ##
-# Licenced under GPLv3														##
-# https://www.gnu.org/licenses/gpl-3.0.en.html								##
-#																			 ##
+# copies of the Software, and to permit persons to whom the Software is	      ##
+# furnished to do so, subject to the following conditions:					  ##
+#																			  ##
+# Licenced under GPLv3														  ##
+# https://www.gnu.org/licenses/gpl-3.0.en.html								  ##
+#																			  ##
 # The above copyright notice and this permission notice shall be included in  ##
-# all copies or substantial portions of the Software.						 ##
+# all copies or substantial portions of the Software.						  ##
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -28,11 +28,11 @@
 ################################################################################
 """
 debootstrapy:
-    - infrastructure that allows for running bash scripts with python
+	- infrastructure that allows for running bash scripts with python
  
-    - python based linux tool for using debootstrap to make a networked
-        debian based, sandbox OR a live image with persistance
-        Using only basic debian/linux/gnu tools
+	- python based linux tool for using debootstrap to make a networked
+		debian based, sandbox OR a live image with persistance
+		Using only basic debian/linux/gnu tools
 
 	currently, only a single os on live usb is supported
 	
@@ -225,7 +225,8 @@ def thing_to_do(self, params):
 				 sandy_netmask, sandy_path, arch	 ,\
 				 repository, components, log_file	,\
 				 host_iface, internal_ip, gateway	,\
-				 livedisk_hwname, live_iso, bit_size):
+				 livedisk_hwname, live_iso, bit_size,\
+                 temp_dir, live_iso_dir):
 
 		self.current_command	 = str
 
@@ -252,12 +253,12 @@ def thing_to_do(self, params):
 		self.live_iso			= live_iso
 		self.livedisk_hw_name	= livedisk_hwname
 		self.error_code_from_current_command = ""
-		self.temp_dir			= '/tmp/new_disk'
-		self.temp_boot_dir		= self.temp_dir + '/boot'
-		self.efi_dir			= self.temp_dir + '/efi'
-		self.live_disk_dir		= self.temp_dir + '/live'
-		self.persistance_dir	= self.temp_dir + '/persistance'
-		self.live_iso_dir		= '/tmp/live-iso'
+		self.temp_dir			= temp_dir
+		self.live_disk_dir		= self.temp_dir      + '/live'
+		self.temp_boot_dir		= self.live_disk_dir + '/boot'
+		self.efi_dir			= self.temp_dir      + '/efi'
+		self.persistance_dir	= self.temp_dir      + '/persistance'
+		self.live_iso_dir		= live_iso_dir
 
 	def error_exit(self, message : str, exception : Exception):
 		redprint(message)
@@ -274,11 +275,10 @@ def thing_to_do(self, params):
 				else:
 					return false
 		except Exception as derp:
-			yellow_bold_print("[-] Shell Command failed!")
 			return derp
 	
 	def exec_command(self, command, blocking = True, shell_env = True):
-		'''TODO: add logging'''
+		'''TODO: add logging/formatting'''
 		#pass strings 
 		try:
 		#if we want it to wait, halting program execution
@@ -300,29 +300,30 @@ def thing_to_do(self, params):
 				pass
 				
 		except Exception as derp:
+			yellow_bold_print("[-] Shell Command failed!")
 			return derp
 
 	def setup_disk(self, diskname, efi_dir, persistance_dir, temp_boot_dir, live_disk_dir):
 		# This creates the basic disk structure of an EFI disk with a single OS.
 		# You CAN boot .ISO Files from the persistance partition if you mount in GRUB2 
 		## EFI
-		steps = ["parted /dev/{}--script mkpart EFI fat16 1MiB 100MiB".format(diskname) ,\
+		steps = ["parted /dev/{}--script mkpart EFI fat16 1MiB 100MiB".format(diskname)       ,\
 		## LIVE disk partition   
-		"parted /dev/{}--script mkpart live fat16 100MiB 3GiB".format(livediskname)	 ,\
-		## Persistance Partition																 ,\
-		"parted /dev/{}--script mkpart persistence ext4 3GiB 100%".format(diskname) ,\
+		"parted /dev/{}--script mkpart live fat16 100MiB 3GiB".format(diskname)	              ,\
+		## Persistance Partition															  ,\
+		"parted /dev/{}--script mkpart persistence ext4 3GiB 100%".format(diskname)           ,\
 		## Sets filesystem flag																  ,\
-		"parted /dev/{}--script set 1 msftdata on".format(diskname)				 ,\
+		"parted /dev/{}--script set 1 msftdata on".format(diskname)				              ,\
 		## Sets boot flag for legacy (NON-EFI) BIOS											  ,\
-		"parted /dev/{}--script set 2 legacy_boot on".format(diskname)			  ,\
-		"parted /dev/{}--script set 2 msftdata on".format(diskname)				 ,\
-		# Here we make the filesystems for the OS to live on									 ,\
-		## EFI																				   ,\
-		"mkfs.vfat -n EFI /dev/{}1".format(diskname)								,\
-		## LIVE disk partition																   ,\
-		"mkfs.vfat -n LIVE /dev/{}2".format(diskname)							   ,\
-		## Persistance Partition																 ,\
-		"mkfs.ext4 -F -L persistence /dev/{}3".format(diskname)					 ]
+		"parted /dev/{}--script set 2 legacy_boot on".format(diskname)			              ,\
+		"parted /dev/{}--script set 2 msftdata on".format(diskname)				              ,\
+		# Here we make the filesystems for the OS to live on								  ,\
+		## EFI																				  ,\
+		"mkfs.vfat -n EFI /dev/{}1".format(diskname)								          ,\
+		## LIVE disk partition																  ,\
+		"mkfs.vfat -n LIVE /dev/{}2".format(diskname)							              ,\
+		## Persistance Partition															  ,\
+		"mkfs.ext4 -F -L persistence /dev/{}3".format(diskname)					              ]
 		exec_pool = self.stepper(steps)
 		if exec_pool.returncode == 1:
 			greenprint("[+] Disk Formatting Finished Sucessfully!")
@@ -468,7 +469,7 @@ def thing_to_do(self, params):
 ##########################################
 		# sources.list copy
 		print("[+] Copying Sources.list")
-		self.current_command = "sudo cp /etc/apt/sources.list {}/etc/apt/".format(self.sandy_path)
+		self.current_command = "sudo cp /etc/apt/sources.list {}/etc/apt/".format(sandy_path)
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Sources.list copied!") 
@@ -479,7 +480,7 @@ def thing_to_do(self, params):
 		#mount and bind the proper volumes
 		# /dev
 		print("[+] Mounting /dev" )
-		self.current_command = "sudo mount -o bind /dev {}/dev".format(self.sandy_path)
+		self.current_command = "sudo mount -o bind /dev {}/dev".format(sandy_path)
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
@@ -489,7 +490,7 @@ def thing_to_do(self, params):
 		print("[+] Mounting /proc")
 	
 ########################################
-		self.current_command = ["sudo mount -o bind -t proc /proc {}/proc".format(self.sandy_path)]
+		self.current_command = ["sudo mount -o bind -t proc /proc {}/proc".format(sandy_path)]
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
@@ -499,7 +500,7 @@ def thing_to_do(self, params):
 #######################################
 		# /sys
 		print("[+] Mounting /sys")
-		self.current_command = ["sudo mount -o bind -t sys /sys {}/sys".format(self.sandy_path)]
+		self.current_command = ["sudo mount -o bind -t sys /sys {}/sys".format(sandy_path)]
 		stepper = self.exec_command(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
@@ -508,7 +509,7 @@ def thing_to_do(self, params):
 
 ###############################################################################
 		#finish setting up the basic system
-	def stage2(self):
+	def stage2(self, sandy_path, user, password, extras):
 		'''
 	Establishes Chroot
 		- sets username / password
@@ -521,12 +522,12 @@ def thing_to_do(self, params):
 		- installs extras
 
 		'''
-		steps = [["sudo chroot {} ".format(self.sandy_path)]								,\
-				 ["useradd {}".format(self.user)]											,\
-				 ["passwd  {}".format(self.password)]										,\
-				 ["login {}".format(self.user)]												,\
+		steps = [["sudo chroot {} ".format(sandy_path)]								,\
+				 ["useradd {}".format(user)]											,\
+				 ["passwd  {}".format(password)]										,\
+				 ["login {}".format(user)]												,\
 				 ["sudo -S apt-get update"]													,\
-				 ["sudo -S apt-get --no-install-recommends install {}".format(self.extras)]	,\
+				 ["sudo -S apt-get --no-install-recommends install {}".format(extras)]	,\
 				#TODO: clean the gpg error message
 				 ["sudo -S apt-get update"]													]#,\  
 				 #If you don't talk en_US
@@ -538,52 +539,51 @@ def thing_to_do(self, params):
 			stepper = self.exec_command(self.current_command)
 
 	#begin setting up services
-	def deboot_third_stage(self):
+	def deboot_third_stage(self, extra_packages):
 		'''
 	Installs extra user packages
 		'''
-		steps = ["sudo -S apt install {}".format(self.extra_packages)]
+		steps = ["sudo -S apt install {}".format(extra_packages)]
 
 	#Makes an interface with iproute1
-	def create_iface_ipr1(self, internal_interface, external_interface):
+	def create_iface_ipr1(self, sand_iface, sand_mac) :
 		steps = [["sudo -S modprobe dummy"] ,\
-				 ["sudo -S ip link set {} dev dummy0".format(self.sandy_iface)] ,\
-				 ["sudo -S ifconfig {} hw ether {}".format(\
-					self.sandy_iface, self.sandy_mac)]]
+				 ["sudo -S ip link set {} dev dummy0".format(sandy_iface)] ,\
+				 ["sudo -S ifconfig {} hw ether {}".format(sandy_iface, sandy_mac)]]
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
 
 	#Makes an interface with iproute2
-	def create_iface_ipr2(self):
-		steps = ["ip link add {} type veth".format(self.sandy_iface)]
+	def create_iface_ipr2(self, sandy_iface):
+		steps = ["ip link add {} type veth".format(sandy_iface)]
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
 
-	def del_iface1(self):
-		steps = [["sudo -S ip addr del {} brd + dev {}".format(self.sandy_ip,self.sandy_netmask,self.sandy_iface)],\
-				  ["sudo -S ip link delete {} type dummy".format(self.sandy_iface)],\
+	def del_iface1(self,sand_ip,sandy_netmask,sand_iface):
+		steps = [["sudo -S ip addr del {} brd + dev {}".format(sandy_ip,sandy_netmask,sandy_iface)],\
+				  ["sudo -S ip link delete {} type dummy".format(sandy_iface)],\
 				 ["sudo -S rmmod dummy".format()]]
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
 
 	#Deletes the SANDBOX Interface
-	def del_iface2(self):
-		steps = ["ip link del {}".format(self.sandy_iface)]
+	def del_iface2(self, sandy_iface):
+		steps = ["ip link del {}".format(sandy_iface)]
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
 
 	#run this from the HOST
-	def establish_network_forwarding(self):
+	def establish_network_forwarding(self, host_iface, sandy_iface):
 		#Allow forwarding on HOST IFACE
-		steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(self.host_iface)],\
+		steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(host_iface)],\
 		#Allow from sandbox to outside
-				 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.sandy_iface, self.host_iface)],\
+				 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(sandy_iface, host_iface)],\
 		#Allow from outside to sandbox
-				 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface, self.sandy_iface)]]
+				 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(host_iface, sandy_iface)]]
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = self.exec_command(self.current_command)
@@ -592,10 +592,10 @@ def thing_to_do(self, params):
 	#virtual computer inside this one and allow to the outside
 	def sandbox_forwarding(self):
 		#Allow forwarding on Sandbox IFACE
-		steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(self.sandy_iface)],\
+		steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(sandy_iface)],\
 		#Allow forwarding on Host IFACE
 		#Allow from sandbox to outside
-				["iptables -A FORWARD -i {} -o -j ACCEPT".format(self.sandy_iface, self.host_iface)],\
+				["iptables -A FORWARD -i {} -o -j ACCEPT".format(sandy_iface, host_iface)],\
 		#Allow from outside to sandbox
 				["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(self.host_iface,self.sandy_iface)]]
 		for instruction in steps:
