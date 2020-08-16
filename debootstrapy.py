@@ -168,46 +168,20 @@ if __name__ == "__main__":
 	# dont use this here, not time for it to be parsed yet
 	#arguments = parser.parse_args()
 
-class CommandRunner:
+# To make a new program, all you have to do is inherit from CommandRunner
+# set whatever you need in __init__ from your arguments or config
+from main import CommandRunner
+class CommandSet(CommandRunner):
 	'''
-NARF!
+	NARF!
 	'''
 	def __init__(self, kwargs):
-		for (k, v) in kwargs.items():
-			setattr(self, k, v)
-		self.current_command	= str
 		self.extras				= "debconf nano curl"
-		self.error_code_from_current_command = ""
-		self.live_disk_dir		= self.temp_dir      + '/live'
+		self.live_disk_dir		= self.temp_dir + '/live'
 		self.temp_boot_dir		= self.live_disk_dir + '/boot'
-		self.efi_dir			= self.temp_dir      + '/efi'
-		self.persistance_dir	= self.temp_dir      + '/persistance'
+		self.efi_dir			= self.temp_dir + '/efi'
+		self.persistance_dir	= self.temp_dir + '/persistance'
 		self.file_source_dir	= self.temp_dir + file_source_dir
-
-
-	###################################################################################
-	## Dynamic imports
-	###################################################################################
-	def dynamic_import(self, module_to_import:str, name_as:str):
-		'''
-		Dynamically imports a module
-			- used for the extensions
-
-		Usage:
-			thing = class.dynamic_import('pybash_script.classname', name='fishy')
-		''' 
-		list_of_subfiles = pkgutil.iter_modules([os.path.dirname(__file__)])
-		imported_module = import_module('.' + name_as, package=__name__)
-		class_filter = ['Stepper']
-		lambda classname: classname != any(class_filter) and not classname.startswith('__')
-		class_name = list(filter(classname(), dir(imported_module)))
-		new_class = getattr(imported_module, class_name[0])
-
-		# need to put an error check here
-		setattr(sys.modules[__name__], name, new_class)
-
-		return new_class
-
 
 #call via terminal
 # you must specify either config or arguments

@@ -35,16 +35,11 @@ It will chroot into the folder of your choice from commandline args
 """
 import os
 import sys
-import inspect
 import logging 
 import pathlib
-import pkgutil
 import argparse
 import subprocess
-import configparser
 from pathlib import Path
-from io import BytesIO,StringIO
-from importlib import import_module
 
 __author__ = 'Adam Galindo'
 __email__ = 'null@null.com'
@@ -73,69 +68,6 @@ makegreen  = lambda text: Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL if (C
 makeblue   = lambda text: Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
 makeyellow = lambda text: Fore.YELLOW + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
 yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.format(text) + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-
-###################################################################################
-## Dynamic imports
-###################################################################################
-def dynamic_import(module_to_import:str, name_as:str):
-	'''
-	Dynamically imports a module
-		- used for the extensions
-	
-	Usage:
-		thing = class.dynamic_import('pybash_script.classname', name='fishy')
-	''' 
-	list_of_subfiles = pkgutil.iter_modules([os.path.dirname(__file__)])
-	imported_module = import_module('.' + name_as, package=__name__)
-	class_filter = ['Stepper']
-	lambda classname: classname != any(class_filter) and not classname.startswith('__')
-	class_name = list(filter(classname(), dir(imported_module)))
-	new_class = getattr(imported_module, class_name[0])
-
-	# need to put an error check here
-	setattr(sys.modules[__name__], name, new_class)
-
-	return new_class
-
-###################################################################################
-# Commandline Arguments
-###################################################################################
-# If the user is running the program as a script we parse the arguments or use the 
-# config file. 
-# If the user is importing this as a module for usage as a command framework we do
-# not activate the argument or configuration file parsing engines
-if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
-	parser.add_argument('--use-arguments',
-								 dest	= 'use_args',
-								 action  = "store_true" ,
-								 default = "derp" ,
-								 help	= "Use Arguments" )
-	parser.add_argument('--user',
-								 dest	= 'user',
-								 action  = "store" ,
-								 default = "derp" ,
-								 help	= "The username to be userd" )
-	parser.add_argument('--password',
-								 dest	= 'password',
-								 action  = "store" ,
-								 default = 'password' ,
-								 help	= "The password to said username" )
-	parser.add_argument('--device',
-								 dest	= 'device',
-								 action  = "store" ,
-								 default = '/home/moop/Desktop/sandbox' ,
-								 help	= "Device name, including partition number, to mount for chroot" )
-	parser.add_argument('--chroot-path',
-								 dest	= 'chroot_path',
-								 action  = "store" ,
-								 default = '/home/moop/Desktop/sandbox' ,
-								 help	= "Full Path of the folder to make/mount for chroot" )
-	parser.add_argument('--logfile',
-								 dest	= 'log_file',
-								 action  = "store" ,
-								 default = './chroot_log.txt' ,
-								 help	= 'logfile name' )
 
 class Stepper:
 #getattr, setattr and self.__dict__
