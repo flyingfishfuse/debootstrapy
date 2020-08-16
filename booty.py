@@ -59,61 +59,71 @@ class GrubbyClass:
 		#########################
 		##	  64-BIT OS	   #
 		#########################
-		bit_sizey = ["32","64"]
+		bit_sizey = lambda bit_size: True if bit_size in ("32","64") else False
 		archy = {'arm'   : 'arm-efi'  ,\
 				 'x86'   : 'i386-efi' ,\
 				 'amd64' : 'X86-64-efi'
 				}
+	 	if bit_sizey(bit_size) and (archy.get(arch) != 'arm'):
+	 	 	 architecture = archy.get(arch)
+	 	elif archy.get(arch) == 'arm':
+	 	 	 architecture = arch
+	 	else:
+	 	 	 logging.error("this shouldn't be happening!")
 		craft_cmd = 'grub-install --removable --target={} --boot-directory={} --efi-directory={} /dev{}'.format(\
-					archy.get(arch),\
+					architecture,\
 					temp_boot_dir,\
 					efi_dir,\
 					livedisk_hwname)
-		greenprint("[+] Installing GRUB2 for {} to /dev/{}".format(arch, livedisk_hw_name)) 
+		logger.info("[+] Installing GRUB2 for {} to /dev/{}".format(architecture, livedisk_hw_name)) 
 		self.current_command = craft_cmd
 		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
-			greenprint("[+] GRUB2 Install Finished Successfully!")
+			logger.info("[+] GRUB2 Install Finished Successfully!")
 		else:
 			error_exit("[-]GRUB2 Install Failed! Check the logfile!", stepper)
 	
 	def install_syslinux(self, livedisk_hw_name, live_disk_dir, file_source_dir, efi_dir, persistance_dir, ):
 		# Copy the MBR for syslinux booting of LIVE disk 
 		try:
-			steps = { 'dd_syslinux' : \
+			steps = { 'dd_syslinux':
 					  ["dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/gptmbr.bin of=/dev/{}".format(livedisk_hw_name) ,
 						"",	""],
 						# Install Syslinux
 						# https://wiki.syslinux.org/wiki/index.php?title=HowTos
-					 'syslinux_install ' : \
+					 'syslinux_install ':
 						["syslinux --install /dev/{}2".format(livedisk_hw_name) ,
 						"",	""],
-					 'rename_isolinux_syslinux ' : \
+					 'rename_isolinux_syslinux ':
 						["mv {}/isolinux {}/syslinux".format(live_disk_dir ,live_disk_dir) ,
 						"",	""],
-					 'move_isolinuxbin_syslinuxbin' : \
+					 'move_isolinuxbin_syslinuxbin':
 						["mv {}/syslinux/isolinux.bin {}/syslinux/syslinux.bin".format(live_disk_dir ,live_disk_dir ) ,
 						"",	""],
-					 'move_isocfg_syscfg' : \
+					 'move_isocfg_syscfg':
 						["mv {}/syslinux/isolinux.cfg {}/syslinux/syslinux.cfg".format(live_disk_dir ,live_disk_dir ) ,
 						"",	""],
-					 'sed_edit1' : \
+					 'sed_edit1':
 						# Magic, sets up syslinux configuration and layouts 
 						["sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(live_disk_dir) ,
 						"",	""],
-					 'sed_edit2' : \
+					 'sed_edit2':
 						["sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 persistence/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(live_disk_dir , live_disk_dir ) ,
 						"",	""],
-					 'sed_edit3' : \
+					 'sed_edit3':
 						["sed --in-place '0,/boot=live/{s/\(boot=live .*\)$/\1 keyboard-layouts=en locales=en_US/}' {}/boot/grub/grub.cfg {}/syslinux/menu.cfg".format(live_disk_dir, live_disk_dir  ) ,
 						"",	""],
-					 'sed_edit4' : \
+					 'sed_edit4':
 						["sed --in-place 's#isolinux/splash#syslinux/splash#' {}/boot/grub/grub.cfg".format(live_disk_dir ),
-						"",	""]}
-			# Clean up!
-			steps = ["umount {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir) ,\
-					 "rmdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir)]
-
+						"",	""],
+					# Clean up!
+					 'cleanup1':
+						 ["umount {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir) ,
+						"",""] ,
+					 'cleanup2': 
+						 ["rmdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir) , 
+						"",""]
+					}
 			exec_pool = self.stepper(steps)
 			if exec_pool.returncode == 1:
 				logger.info("[+] Syslinux Installed!") 
