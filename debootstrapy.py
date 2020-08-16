@@ -54,28 +54,6 @@ __version__ = '1'
 __license__ = 'GPLv3'
 
 ###################################################################################
-# Color Print Functions
-###################################################################################
-try:
-	import colorama
-	from colorama import init
-	init()
-	from colorama import Fore, Back, Style
-	COLORMEQUALIFIED = True
-except ImportError as derp:
-	print("[-] NO COLOR PRINTING FUNCTIONS AVAILABLE")
-	COLORMEQUALIFIED = False
-
-blueprint = lambda text: print(Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-greenprint = lambda text: print(Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-redprint = lambda text: print(Fore.RED + ' ' +  text + ' ' + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-# inline colorization for lambdas in a lambda
-makered	= lambda text: Fore.RED + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-makegreen  = lambda text: Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-makeblue   = lambda text: Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-makeyellow = lambda text: Fore.YELLOW + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.format(text) + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-###################################################################################
 # Commandline Arguments
 ###################################################################################
 # If the user is running the program as a script we parse the arguments or use the 
@@ -83,6 +61,7 @@ yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.forma
 # If the user is importing this as a module for usage as a command framework we do
 # not activate the argument or configuration file parsing engines
 if __name__ == "__main__":
+	import main
 	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
 	parser.add_argument('--use-config',
 								 dest		= 'config_file',
@@ -188,55 +167,6 @@ if __name__ == "__main__":
 								 help	= 'Network Gateway IP' )
 	# dont use this here, not time for it to be parsed yet
 	#arguments = parser.parse_args()
-
-class Stepper:
-	def __init__(self):
-		self.script_cwd		   = pathlib.Path().absolute()
-		self.script_osdir	   = pathlib.Path(__file__).parent.absolute()
-		self.current_command   = str 
-
-	def error_exit(self, message : str, exception : Exception):
-		redprint(message)
-		print(exception.with_traceback)
-		sys.exit()
-	
-	def step(self, list_of_commands):
-		try:
-			for instruction in list_of_commands if (len(list_of_commands) > 1):
-				self.current_command = instruction
-				stepper = Stepper.step(self.current_command)
-				if stepper.returncode == 1 :
-					return 
-				else:
-					return false
-		except Exception as derp:
-			return derp
-	
-	def exec_command(self, command, blocking = True, shell_env = True):
-		'''TODO: add logging/formatting'''
-		#pass strings 
-		try:
-		#if we want it to wait, halting program execution
-			if blocking == True:
-				step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				# print the response
-				output, error = step.communicate()
-				herp = output.decode()
-				derp = error.decode()
-				for output_line in herp[0].decode(encoding='utf-8').split('\n'):
-					greenprint(output_line)
-				for error_lines in herp[0].decode(encoding='utf-8').split('\n'):
-					greenprint(error_lines)
-
-				return step
-				
-			elif blocking == False:
-				# TODO: not implemented yet				
-				pass
-				
-		except Exception as derp:
-			yellow_bold_print("[-] Shell Command failed!")
-			return derp
 
 class CommandRunner:
 	'''

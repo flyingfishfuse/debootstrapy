@@ -101,10 +101,10 @@ class DiskOperations:
 	def move_system_files(self, efi_dir, live_disk_dir,persistance_dir,file_source_dir):
 		# Creating Temporary work directories
 		steps = { 'make_directories'  : 
-					["mkdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir) ,
+					["mkdir {} {} {} {}".format(efi_dir, live_disk_dir ,persistance_dir, file_source_dir),
 					'[+] Success','[-] Failure'],
 				  'mount_partition1'  :
-					["mount /dev/{}1 {}".format(diskname, efi_dir )	,
+					["mount /dev/{}1 {}".format(diskname, efi_dir ),
 					'[+] Success','[-] Failure'],	
 				  'mount_partition2' :
 					["mount /dev/{}2 {}".format(diskname, live_disk_dir),

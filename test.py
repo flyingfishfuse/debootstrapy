@@ -140,8 +140,7 @@ if __name__ == "__main__":
 class Stepper:
 #getattr, setattr and self.__dict__
 	'''
-	steps = {"command_name"  : ["string with shell command"		  , "[-] failure message", "[+] success message" ] ,
-		 	 "command_name2" : ["another string with a shell command", "[-] failure message", "[+] success message" ] ,}
+Steps through the command list
 	'''
 	def __init__(self, kwargs):
 		for (k, v) in kwargs.items():
@@ -165,11 +164,11 @@ class Stepper:
 		sys.exit()
 	
 	def step_test(self, dict_of_commands : dict):
-		example  = {"command_name"  : ["string with shell command", "[+] success message", "[-] failure message" ]}
-		example2 = {"command_name"  : ["string with shell command"		  , "[-] failure message", "[+] success message" ] ,
-		 	 		"command_name2" : ["another string with a shell command", "[-] failure message", "[+] success message" ] ,}
+		self.example  = {"ls_root"  : ["ls -la /", "[+] success message", "[-] failure message" ]}
+		self.example2 = {"ls_etc"  : ["ls -la /etc"		  , "[-] failure message", "[+] success message" ] ,
+		 	 			 "ls_home" : ["ls -la ~/", "[-] failure message", "[+] success message" ] ,}
 		try:
-			for instruction in example.values(), example2.values():
+			for instruction in self.example.values(), self.example2.values():
 				cmd 	= instruction[0]
 				success = instruction[1]
 				fail 	= instruction[2]
@@ -244,86 +243,42 @@ class Chroot:
 				'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"',
 					  			 "[+] LOL!",
 					  			 "[-] DICKS Failed! Check the logfile!"]}
-	#self.current_command = steps['mount_dev']
-	#stepper = Stepper.step(steps=self.current_command)
+		#self.current_command = steps['mount_dev']
+		#stepper = Stepper.step(steps=self.current_command)
 	
-	stepper = Stepper.step(steps=steps)
-	if stepper.returncode == 1:
-		print("wat")
-	else:
-		error_exit("oh no", stepper)
+		stepper = Stepper.step(steps=steps)
+		if stepper.returncode == 1:
+			self.info_message("wat")
+		else:
+			error_exit("oh no", stepper)
 		
 	def chroot(self):
-		steps = { 'mount_dev' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
-							 	 "[+] Mounted /dev on {}!".format(self.chroot_base),
-								 "[-] Mounting /dev on {} Failed! Check the logfile!".format(self.chroot_base) ],
-				 'mount_proc' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
-								 "[+] Mounted /proc on {}!".format(self.chroot_base),
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],
-				 'mount_sys'  : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
-								 "[+] Mounted /proc on {}!".format(self.chroot_base),
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],
-				'chroot'	 :	["sudo chroot {} ".format(chroot_base),
-					  			 "[+] {}!".format(),
-					  			 "[-] {} Failed! Check the logfile!".format()]
+		steps = { 'mount_dev': 
+					["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
+					 "[+] Mounted /dev on {}!".format(self.chroot_base),
+					 "[-] Mounting /dev on {} Failed! Check the logfile!".format(self.chroot_base) ],
+				 'mount_proc': 
+				 	["sudo mount -o bind /proc {}/proc".format(self.chroot_base),
+					 "[+] Mounted /proc on {}!".format(self.chroot_base),
+					 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],
+				 'mount_sys': 
+				 	["sudo mount -o bind /sys {}/sys".format(self.chroot_base),
+					 "[+] Mounted /sys on {}!".format(self.chroot_base),
+					 "[-] Mounting /sys on {} Failed! Check the logfile!".format(self.chroot_base)],
+				'chroot':	
+					["sudo chroot {} ".format(chroot_base),
+					"[+] Success!",
+					"[-] Failed! Check the logfile!"]
 				}
 	#self.current_command = steps['mount_dev']
-	stepper = Stepper.step(steps=steps)
-	if stepper.returncode == 1:
-		print("")
-	else:
-		error_exit()
-
-###############################################################################
-
-		#finish setting up the basic system
-	def stage2(self, sandy_path, user, password, extras):
-		'''
-	Establishes Chroot
-		- sets username / password
-
-		- LOG'S IN, DONT LEAVE THE COMPUTER
-			-for security purposes
-
-		- updates packages
-		- installs debconf, nano, curl
-		- installs extras
-
-		'''
-		steps = {'chroot': \
-					["sudo chroot {} ".format(sandy_path),
-					  "[+] {}!".format(),
-					  "[-] {} Failed! Check the logfile!".format() 	],
-				 'adduser':
-					 ["useradd {}".format(user),
-					  "[+] !",
-					  "[-] Failed! Check the logfile!" 	],
-				 'change_password':
-					 ["passwd  {}".format(password),
-					  "[+] !",
-					  "[-] Failed! Check the logfile!" 	],
-				 'login':
-					 ["login {}".format(user),
-					  "[+] !",
-					  "[-] Failed! Check the logfile!" 	],
-				 'apt_update':
-					 ["sudo -S apt-get update",
-					  "[+] !",
-					  "[-] Failed! Check the logfile!" 	],
-				 'apt_install_extras':
-					 ["sudo -S apt-get --no-install-recommends install {}".format(extras),
-					  "[+] !",
-					  "[-] Failed! Check the logfile!" 	]
-				}
-				# TODO: clean the gpg error message
-				# sudo -S apt-get install locales dialog
-				# sudo -S locale-gen en_US.UTF-8  # or your preferred locale
-				# tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
-		for instruction in steps:
-			self.current_command = instruction
-			stepper = Stepper.step(self.current_command)
+		stepper = Stepper.step(steps=steps)
+		if stepper.returncode == 1:
+			self.info_message("[+] Chroot Sucessful!")
+		else:
+			error_exit('[-] Chroot Failure, Check the Logfile!', stepper)
 
 if __name__ == "__main__":
 	#arguments = parser.parse_args()
 	#if 	arguments.use_args == True:
+	Stepper.step_test()
 	Chroot.ls_test()

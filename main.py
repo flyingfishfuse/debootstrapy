@@ -89,6 +89,10 @@ if __name__ == "__main__":
 								 dest		= 'config_file',
 								 action		= "store_true" ,
 								 help		= 'Use config file, if used, will ignore other options' )
+	parser.add_argument('--config-filename',
+								 dest		= 'config_filename',
+								 action		= "store" ,
+								 help		= 'Name of the config file' )
 	parser.add_argument('--execute-module',
 								 dest		= 'dynamic_import_bool',
 								 action		= "store_true" ,
@@ -105,7 +109,6 @@ class Stepper:
 	def __init__(self):
 		self.script_cwd		   = pathlib.Path().absolute()
 		self.script_osdir	   = pathlib.Path(__file__).parent.absolute()
-		self.current_command   = str 
 
 	def error_exit(self, message : str, exception : Exception):
 		redprint(message)
@@ -113,9 +116,9 @@ class Stepper:
 		sys.exit()
 	
 	def step_test(self, dict_of_commands : dict):
-		self.example  = {"ls_root"  : ["ls -la /", "[+] success message", "[-] failure message" ]}
-		self.example2 = {"ls_etc"  : ["ls -la /etc"		  , "[-] failure message", "[+] success message" ] ,
-		 	 			 "ls_home" : ["ls -la ~/", "[-] failure message", "[+] success message" ] ,}
+		self.example  = {"ls_root"  : ["ls -la /"  , "[+] success message", "[-] failure message" ]}
+		self.example2 = {"ls_etc"  : ["ls -la /etc", "[-] failure message", "[+] success message" ] ,
+		 	 			 "ls_home" : ["ls -la ~/"  , "[-] failure message", "[+] success message" ] ,}
 		try:
 			for instruction in self.example.values(), self.example2.values():
 				cmd 	= instruction[0]

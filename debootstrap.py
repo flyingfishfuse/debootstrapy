@@ -30,7 +30,9 @@
 """
 This is a test of the command framework
 
-It will do the debootstrap stuff
+This performs the steps necessary to debootstrap a new
+Debian/Ubuntu/Mint installation for use as a sandbox
+or new OS install.
 
 """
 import os
@@ -104,29 +106,29 @@ class Debootstrap:
 		- installs extras
 
 		'''
-		steps = {'chroot': \
+		steps = {'chroot':
 					["sudo chroot {} ".format(sandy_path),
-					  "[+] {}!".format(),
-					  "[-] {} Failed! Check the logfile!".format() 	],
+					  "[+] Chrooted!".format(),
+					  "[-] Chroot Failed! Check the logfile!".format() 	],
 				 'adduser':
 					 ["useradd {}".format(user),
-					  "[+] !",
+					  "[+] User Added!",
 					  "[-] Failed! Check the logfile!" 	],
 				 'change_password':
 					 ["passwd  {}".format(password),
-					  "[+] !",
+					  "[+] Password Changed!",
 					  "[-] Failed! Check the logfile!" 	],
 				 'login':
 					 ["login {}".format(user),
-					  "[+] !",
+					  "[+] Logged In!",
 					  "[-] Failed! Check the logfile!" 	],
 				 'apt_update':
 					 ["sudo -S apt-get update",
-					  "[+] !",
+					  "[+] Packages Updated!",
 					  "[-] Failed! Check the logfile!" 	],
 				 'apt_install_extras':
 					 ["sudo -S apt-get --no-install-recommends install {}".format(extras),
-					  "[+] !",
+					  "[+] Extras Installed!",
 					  "[-] Failed! Check the logfile!" 	]
 				}
 				# TODO: clean the gpg error message
