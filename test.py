@@ -172,7 +172,7 @@ class Chroot:
 				 'ls_etc'  : ["ls -la /etc",
 								 "[+] Command Sucessful",
 								 "[-] ls -la Failed! Check the logfile!"],
-				'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"',
+				 'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"',
 					  			 "[+] LOL!",
 					  			 "[-] DICKS Failed! Check the logfile!"]}
 		#self.current_command = steps['mount_dev']
@@ -184,7 +184,7 @@ class Chroot:
 		else:
 			error_exit("oh no", stepper)
 		
-	def chroot(self):
+	def step_on_through(self):
 		steps = { 'mount_dev': 
 					["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
 					 "[+] Mounted /dev on {}!".format(self.chroot_base),
@@ -197,6 +197,10 @@ class Chroot:
 				 	["sudo mount -o bind /sys {}/sys".format(self.chroot_base),
 					 "[+] Mounted /sys on {}!".format(self.chroot_base),
 					 "[-] Mounting /sys on {} Failed! Check the logfile!".format(self.chroot_base)],
+	 	 	 	 'move_resolvconf':
+	 	 	 	 	 ["sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(self.chroot_base),
+	 	 	 	 	 "[+] Resolv.conf Copied!",
+	 	 	 	 	 "[-] Failure To Copy Resolv.conf! Check the logfile!"],
 				'chroot':	
 					["sudo chroot {} ".format(chroot_base),
 					"[+] Success!",
