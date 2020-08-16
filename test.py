@@ -179,11 +179,11 @@ class Chroot:
 		#stepper = Stepper.step(steps=self.current_command)
 	
 		stepper = Stepper.step(steps=steps)
-		if stepper.returncode == 1:
-			self.info_message("wat")
-			self.info_message(stepper)
-		else:
+		if isinstance(stepper, Exception):
 			error_exit("oh no", stepper)
+		else:
+			self.info_message("wat")
+						
 		
 	def step_on_through(self):
 		steps = { 'mount_dev': 
