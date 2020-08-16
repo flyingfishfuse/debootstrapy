@@ -188,15 +188,54 @@ if __name__ == "__main__":
 	# dont use this here, not time for it to be parsed yet
 	#arguments = parser.parse_args()
 
-#Set some variables
-
-class OSStuff:
+class Stepper:
 	def __init__(self):
 		self.script_cwd		   = pathlib.Path().absolute()
-		self.script_osdir	   = pathlib.Path(__file__).parent.absolute() 
+		self.script_osdir	   = pathlib.Path(__file__).parent.absolute()
+		self.current_command   = str 
 
-if __name__ == "__main__":
-	OSVars = OSStuff()
+	def error_exit(self, message : str, exception : Exception):
+		redprint(message)
+		print(exception.with_traceback)
+		sys.exit()
+	
+	def step(self, list_of_commands):
+		try:
+			for instruction in list_of_commands if (len(list_of_commands) > 1):
+				self.current_command = instruction
+				stepper = Stepper.step(self.current_command)
+				if stepper.returncode == 1 :
+					return 
+				else:
+					return false
+		except Exception as derp:
+			return derp
+	
+	def exec_command(self, command, blocking = True, shell_env = True):
+		'''TODO: add logging/formatting'''
+		#pass strings 
+		try:
+		#if we want it to wait, halting program execution
+			if blocking == True:
+				step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				# print the response
+				output, error = step.communicate()
+				herp = output.decode()
+				derp = error.decode()
+				for output_line in herp[0].decode(encoding='utf-8').split('\n'):
+					greenprint(output_line)
+				for error_lines in herp[0].decode(encoding='utf-8').split('\n'):
+					greenprint(error_lines)
+
+				return step
+				
+			elif blocking == False:
+				# TODO: not implemented yet				
+				pass
+				
+		except Exception as derp:
+			yellow_bold_print("[-] Shell Command failed!")
+			return derp
 
 class CommandRunner:
 	'''
@@ -207,19 +246,16 @@ def thing_to_do(self, params):
 	documentation
 	"""
 	try:
-		...::LOGIC::...
-		steps = ["string with shell command" , "another string with a shell command"]
-		exec_pool = self.stepper(steps)
-		if exec_pool.returncode == 1:
-			greenprint("[+] Task Finished Sucessfully!")
-			...::LOGIC::...
-		elif exec_pool.returncode == WHATEVER:
-			redprint("[-] Task Failed! Check the logfile!")
-			...::LOGIC::...
-	except Exception as derp:
-		error_exit("[-] Failure Message", derp)
-		...::LOGIC::...
-	::END_OF_FUNCTION::
+		steps = {"command_name"  : ["string with shell command"          , "[-] failure message", "[+] success message" ] ,\
+			 	 "command_name2" : ["another string with a shell command", "[-] failure message", "[+] success message" ] ,}
+		for instruction in steps:
+			exec_pool = self.stepper(steps)
+			if exec_pool.returncode == 1:
+				greenprint("[+] Task Finished Sucessfully!")
+			elif exec_pool.returncode == WHATEVER:
+				redprint("[-] Task Failed! Check the logfile!")
+		except Exception as derp:
+			error_exit("[-] Failure Message", derp)
 
 	'''
 	def __init__(self, sand_hostname, user, password ,\
@@ -261,49 +297,6 @@ def thing_to_do(self, params):
 		self.efi_dir			= self.temp_dir      + '/efi'
 		self.persistance_dir	= self.temp_dir      + '/persistance'
 		self.file_source_dir	= self.temp_dir + file_source_dir
-
-	def error_exit(self, message : str, exception : Exception):
-		redprint(message)
-		print(exception.with_traceback)
-		sys.exit()
-	
-	def stepper(self, list_of_commands):
-		try:
-			for instruction in list_of_commands if (len(list_of_commands) > 1):
-				self.current_command = instruction
-				stepper = self.exec_command(self.current_command)
-				if stepper.returncode == 1 :
-					return 
-				else:
-					return false
-		except Exception as derp:
-			return derp
-	
-	def exec_command(self, command, blocking = True, shell_env = True):
-		'''TODO: add logging/formatting'''
-		#pass strings 
-		try:
-		#if we want it to wait, halting program execution
-			if blocking == True:
-				step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-				# print the response
-				output, error = step.communicate()
-				herp = output.decode()
-				derp = error.decode()
-				for output_line in herp[0].decode(encoding='utf-8').split('\n'):
-					greenprint(output_line)
-				for error_lines in herp[0].decode(encoding='utf-8').split('\n'):
-					greenprint(error_lines)
-
-				return step
-				
-			elif blocking == False:
-				# TODO: not implemented yet				
-				pass
-				
-		except Exception as derp:
-			yellow_bold_print("[-] Shell Command failed!")
-			return derp
 
 	def setup_disk(self, diskname, efi_dir, persistance_dir, temp_boot_dir, live_disk_dir):
 		# This creates the basic disk structure of an EFI disk with a single OS.
@@ -371,7 +364,7 @@ def thing_to_do(self, params):
 					"grub-install --removable --target=arm-efi --boot-directory={} --efi-directory={} /dev{}".format(\
 					 temp_boot_dir, efi_dir, livedisk_hw_name)
 				#########################
-				stepper = self.exec_command(self.current_command)
+				stepper = Stepper.step(self.current_command)
 				if stepper.returncode == 1:
 					greenprint("[+] GRUB2 Install Finished Successfully!")
 				else:
@@ -384,7 +377,7 @@ def thing_to_do(self, params):
 					"grub-install --removable --target=i386-efi --boot-directory={} --efi-directory={} /dev{}".format(\
 					 temp_boot_dir, efi_dir, livedisk_hw_name)
 				#########################
-				stepper = self.exec_command(self.current_command)
+				stepper = Stepper.step(self.current_command)
 				if stepper.returncode == 1:
 					greenprint("[+] GRUB2 Install Finished Successfully!")
 				else:
@@ -397,7 +390,7 @@ def thing_to_do(self, params):
 					"grub-install --removable --target=X86_64-efi --boot-directory={} --efi-directory={} /dev{}".format(\
 					 temp_boot_dir, efi_dir, livedisk_hw_name)
 				#########################
-				stepper = self.exec_command(self.current_command)
+				stepper = Stepper.step(self.current_command)
 				if stepper.returncode == 1:
 					greenprint("[+] GRUB2 Install Finished Successfully!")
 				else:
@@ -452,7 +445,7 @@ def thing_to_do(self, params):
 		greenprint("[+] Beginning Debootstrap")
 		self.current_command = "sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
 												 components,arch,sandy_path,repository)
-		stepper = self.exec_command(self.current_command)
+		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
 			greenprint("[+] Debootstrap Finished Successfully!")
 		elif stepper.returncode != 1:
@@ -462,7 +455,7 @@ def thing_to_do(self, params):
 		#resolv.conf copy
 		greenprint("[+] Copying Resolv.conf")
 		self.current_command = "sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(sandy_path)
-		stepper = self.exec_command(self.current_command)
+		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
 			greenprint("[+] Resolv.conf copied!") 
 		else:
@@ -471,8 +464,8 @@ def thing_to_do(self, params):
 ##########################################
 		# sources.list copy
 		print("[+] Copying Sources.list")
-		self.current_command = "sudo cp /etc/apt/sources.list {}/etc/apt/".format(sandy_path)
-		stepper = self.exec_command(self.current_command)
+		self.current_command = ["sudo cp /etc/apt/sources.list {}/etc/apt/".format(sandy_path)]
+		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Sources.list copied!") 
 		else:
@@ -482,8 +475,8 @@ def thing_to_do(self, params):
 		#mount and bind the proper volumes
 		# /dev
 		print("[+] Mounting /dev" )
-		self.current_command = "sudo mount -o bind /dev {}/dev".format(sandy_path)
-		stepper = self.exec_command(self.current_command)
+		self.current_command = ["sudo mount -o bind /dev {}/dev".format(sandy_path)]
+		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
@@ -493,7 +486,7 @@ def thing_to_do(self, params):
 	
 ########################################
 		self.current_command = ["sudo mount -o bind -t proc /proc {}/proc".format(sandy_path)]
-		stepper = self.exec_command(self.current_command)
+		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
@@ -503,7 +496,7 @@ def thing_to_do(self, params):
 		# /sys
 		print("[+] Mounting /sys")
 		self.current_command = ["sudo mount -o bind -t sys /sys {}/sys".format(sandy_path)]
-		stepper = self.exec_command(self.current_command)
+		stepper = Stepper.step(self.current_command)
 		if stepper.returncode == 1:
 			print("[+] Mounted!") 
 		else:
@@ -524,21 +517,21 @@ def thing_to_do(self, params):
 		- installs extras
 
 		'''
-		steps = [["sudo chroot {} ".format(sandy_path)]								,\
-				 ["useradd {}".format(user)]											,\
-				 ["passwd  {}".format(password)]										,\
-				 ["login {}".format(user)]												,\
-				 ["sudo -S apt-get update"]													,\
-				 ["sudo -S apt-get --no-install-recommends install {}".format(extras)]	,\
+		steps = ["sudo chroot {} ".format(sandy_path)								,\
+				 "useradd {}".format(user)											,\
+				 "passwd  {}".format(password)										,\
+				 "login {}".format(user)												,\
+				 "sudo -S apt-get update"													,\
+				 "sudo -S apt-get --no-install-recommends install {}".format(extras)	,\
 				#TODO: clean the gpg error message
-				 ["sudo -S apt-get update"]													]#,\  
+				 "sudo -S apt-get update"													]#,\  
 				 #If you don't talk en_US
 				 #["sudo -S apt-get install locales dialog"]									,\
 		#sudo -S locale-gen en_US.UTF-8  # or your preferred locale
 		#tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			stepper = Stepper.step(self.current_command)
 
 	#begin setting up services
 	def deboot_third_stage(self, extra_packages):
@@ -549,69 +542,69 @@ def thing_to_do(self, params):
 
 	#Makes an interface with iproute1
 	def create_iface_ipr1(self, sand_iface, sand_mac) :
-		steps = [["sudo -S modprobe dummy"] ,\
-				 ["sudo -S ip link set {} dev dummy0".format(sandy_iface)] ,\
-				 ["sudo -S ifconfig {} hw ether {}".format(sandy_iface, sandy_mac)]]
+		steps = [["sudo -S modprobe dummy" ,\
+				 "sudo -S ip link set {} dev dummy0".format(sandy_iface) ,\
+				 "sudo -S ifconfig {} hw ether {}".format(sandy_iface, sandy_mac)]
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			stepper = Stepper.step(self.current_command)
 
 	#Makes an interface with iproute2
 	def create_iface_ipr2(self, sandy_iface):
 		steps = ["ip link add {} type veth".format(sandy_iface)]
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			stepper = Stepper.step(self.current_command)
 
 	def del_iface1(self,sand_ip,sandy_netmask,sand_iface):
-		steps = [["sudo -S ip addr del {} brd + dev {}".format(sandy_ip,sandy_netmask,sandy_iface)],\
-				  ["sudo -S ip link delete {} type dummy".format(sandy_iface)],\
-				 ["sudo -S rmmod dummy".format()]]
+		steps = ["sudo -S ip addr del {} brd + dev {}".format(sandy_ip,sandy_netmask,sandy_iface),\
+				 "sudo -S ip link delete {} type dummy".format(sandy_iface),\
+				 "sudo -S rmmod dummy".format()]
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			stepper = Stepper.step(self.current_command)
 
 	#Deletes the SANDBOX Interface
 	def del_iface2(self, sandy_iface):
 		steps = ["ip link del {}".format(sandy_iface)]
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			stepper = Stepper.step(self.current_command)
 
 	#run this from the HOST
 	def establish_network_forwarding(self, host_iface, sandy_iface):
 		#Allow forwarding on HOST IFACE
-		steps = [["sysctl -w net.ipv4.conf.{}.forwarding=1".format(host_iface)],\
+		steps = ["sysctl -w net.ipv4.conf.{}.forwarding=1".format(host_iface),\
 		#Allow from sandbox to outside
-				 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(sandy_iface, host_iface)],\
+				 "iptables -A FORWARD -i {} -o {} -j ACCEPT".format(sandy_iface, host_iface),\
 		#Allow from outside to sandbox
-				 ["iptables -A FORWARD -i {} -o {} -j ACCEPT".format(host_iface, sandy_iface)]]
+				 "iptables -A FORWARD -i {} -o {} -j ACCEPT".format(host_iface, sandy_iface)]
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			stepper = Stepper.step(self.current_command)
 
 	#run this from the Host
 	def establish_iptables(self):
 		# 1. Delete all existing rules
-		steps = [["iptables -F"] ,\
+		steps = ["iptables -F" ,\
 		 # 2. Set default chain policies
-				 ["iptables -P INPUT DROP"],\
-				 ["iptables -P FORWARD DROP"],\
-				 ["iptables -P OUTPUT DROP"],\
-				# 4. Allow ALL incoming SSH
-				["iptables -A INPUT -i eth0 -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT"],\
-				["iptables -A OUTPUT -o eth0 -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT"],\
+				 "iptables -P INPUT DROP",\
+				 "iptables -P FORWARD DROP",\
+				 "iptables -P OUTPUT DROP",\
+				#4. Allow ALL incoming SSH
+				"iptables -A INPUT -i eth0 -p tcp --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT",\
+				"iptables -A OUTPUT -o eth0 -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT",\
 				# Allow incoming HTTPS
-				["iptables -A INPUT -i eth0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT"],\
-				["iptables -A OUTPUT -o eth0 -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT"],\
+				"iptables -A INPUT -i eth0 -p tcp --dport 443 -m state --state NEW,ESTABLISHED -j ACCEPT",\
+				"iptables -A OUTPUT -o eth0 -p tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT",\
 				# 19. Allow MySQL connection only from a specic network
 				 #iptables -A INPUT -i eth0 -p tcp -s 192.168.200.0/24 --dport 3306 -m state --state NEW,ESTABLISHED -j ACCEPT
 				 #iptables -A OUTPUT -o eth0 -p tcp --sport 3306 -m state --state ESTABLISHED -j ACCEPT
 				# 23. Prevent DoS attack
-				["iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT"]]
+				"iptables -A INPUT -p tcp --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT"]
 		for instruction in steps:
 			self.current_command = instruction
-			stepper = self.exec_command(self.current_command)
+			Stepper.step(self.current_command)
 
 #call via terminal
 # you must specify either config or arguments
