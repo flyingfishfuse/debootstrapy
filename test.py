@@ -97,18 +97,13 @@ Steps through the command list
 	def __init__(self):
 		self.script_cwd		   	= pathlib.Path().absolute()
 		self.script_osdir	   	= pathlib.Path(__file__).parent.absolute()
-		self.debug_message		= debug_message
-		self.info_message	 	= info_message
-		self.warning_message  	= warning_message
-		self.error_message		= error_message 
-		self.critical_message 	= critical_message
 		self.example  = {"ls_root"  : ["ls -la /", "[+] success message", "[-] failure message" ]}
 		self.example2 = {"ls_etc"  : ["ls -la /etc"		  , "[-] failure message", "[+] success message" ] ,
 		 	 			 "ls_home" : ["ls -la ~/", "[-] failure message", "[+] success message" ] ,}
 
-	def error_exit(self, message : str, exception : Exception):
-		self.error_message(message = message)
-		print(exception.with_traceback)
+	def error_exit(self, message : str, derp : Exception):
+		error_message(message = message)
+		print(derp.with_traceback)
 		sys.exit()
 	
 	def step_test(self, dict_of_commands : dict):
@@ -120,9 +115,9 @@ Steps through the command list
 				self.current_command = cmd
 				stepper = self.exec_command(str(self.current_command))
 				if stepper.returncode == 1 :
-					self.info_message(success)
+					info_message(success)
 				else:
-					self.error_message(error)
+					error_message(error)
 		except Exception as derp:
 			return derp
 
@@ -135,9 +130,9 @@ Steps through the command list
 				self.current_command = cmd
 				stepper = self.exec_command(self.current_command)
 				if stepper.returncode == 0 :
-					self.info_message(success)
+					info_message(success)
 				else:
-					self.error_message(error)
+					error_message(error)
 		except Exception as derp:
 			return derp
 	
@@ -145,25 +140,27 @@ Steps through the command list
 		'''TODO: add formatting'''
 		try:
 			if blocking == True:
-				read, write = os.pipe()
-				#step = subprocess.Popen(command, 
+				#read, write = os.pipe()
+				#step = subprocess.Popen(something_to_set_env, 
 				#						shell=shell_env, 
 				#						stdin=read, 
 				#						stdout=sys.stdout, 
 				#						stderr=subprocess.PIPE)
-				step = subprocess.Popen(command,
+				step = subprocess.Popen(command.split(" "),
 										shell=shell_env,
 				 						stdout=subprocess.PIPE,
 				 						stderr=subprocess.PIPE)
 				#Note that this is limited to sending a maximum of 64kB at a time,
 				#byteswritten = os.write(write, str(command))
 				output, error = step.communicate()
-				herp = output.decode()
-				derp = error.decode()
-				for output_line in herp[0].decode(encoding='utf-8').split('\n'):
-					self.info_message(output_line)
-				for error_lines in derp[0].decode(encoding='utf-8').split('\n'):
-					self.critical_message(error_lines)
+				herp = output.decode(encoding='utf-8')
+				derp = error.decode(encoding='utf-8')
+				for output_line in herp[0].split('\n'):
+					info_message(output_line)
+					print(output_line)
+				for error_lines in derp[0].split('\n'):
+					critical_message(error_lines)
+					print(error_lines)
 				return step
 			elif blocking == False:
 				# TODO: not implemented yet				
@@ -202,7 +199,7 @@ class Chroot:
 		if isinstance(stepper, Exception):
 			error_exit("oh no", stepper)
 		else:
-			stepper.info_message("wat")
+			info_message("wat")
 						
 		
 	def step_on_through(self):
@@ -232,7 +229,7 @@ class Chroot:
 		if isinstance(stepper, Exception):
 			error_exit('[-] Chroot Failure, Check the Logfile!', stepper)
 		else:
-			self.info_message("[+] Chroot Sucessful!")
+			info_message("[+] Chroot Sucessful!")
 
 if __name__ == "__main__":
 	#arguments = parser.parse_args()
