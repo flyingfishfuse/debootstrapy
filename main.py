@@ -81,6 +81,8 @@ yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.forma
 # config file. 
 # If the user is importing this as a module for usage as a command framework we do
 # not activate the argument or configuration file parsing engines
+
+#prevent loading on import
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
 	parser.add_argument('--use-config',
@@ -88,9 +90,13 @@ if __name__ == "__main__":
 								 action		= "store_true" ,
 								 help		= 'Use config file, if used, will ignore other options' )
 	parser.add_argument('--execute-module',
-								 dest		= 'dynamic_import',
+								 dest		= 'dynamic_import_bool',
+								 action		= "store_true" ,
+								 help		= 'Will execute user created module if used, will ignore config options ' )
+	parser.add_argument('--module-name',
+								 dest		= 'dynamic_import_name',
 								 action		= "store" ,
-								 help		= 'will execute user created module' )
+								 help		= 'Name of user created module' )
 
 	# dont use this here, not time for it to be parsed yet
 	#arguments = parser.parse_args()
@@ -106,15 +112,36 @@ class Stepper:
 		print(exception.with_traceback)
 		sys.exit()
 	
-	def step(self, list_of_commands):
+	def step_test(self, dict_of_commands : dict):
+		self.example  = {"ls_root"  : ["ls -la /", "[+] success message", "[-] failure message" ]}
+		self.example2 = {"ls_etc"  : ["ls -la /etc"		  , "[-] failure message", "[+] success message" ] ,
+		 	 			 "ls_home" : ["ls -la ~/", "[-] failure message", "[+] success message" ] ,}
 		try:
-			for instruction in list_of_commands if (len(list_of_commands) > 1):
-				self.current_command = instruction
-				stepper = Stepper.step(self.current_command)
+			for instruction in self.example.values(), self.example2.values():
+				cmd 	= instruction[0]
+				success = instruction[1]
+				fail 	= instruction[2]
+				self.current_command = cmd
+				stepper = self.exec_command(self.current_command)
 				if stepper.returncode == 1 :
-					return 
+					return success
 				else:
-					return false
+					return fail
+		except Exception as derp:
+			return derp
+
+	def step(self, dict_of_commands : dict):
+		try:
+			for instruction in dict_of_commands.values():
+				cmd 	= instruction[0]
+				success = instruction[1]
+				fail 	= instruction[2]
+				self.current_command = cmd
+				stepper = self.exec_command(self.current_command)
+				if stepper.returncode == 1 :
+					return success
+				else:
+					return fail
 		except Exception as derp:
 			return derp
 	

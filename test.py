@@ -148,14 +148,14 @@ class Stepper:
 								filemode='w')
 		self.logger		   		= logging.getLogger()
 		self.logger.setLevel(logging.DEBUG)
-		debug_message			= lambda message: logger.debug(blueprint(message)) 
-		info_message	 		= lambda message: logger.info(greenprint(message)) 
-		warning_message  		= lambda message: logger.warning(yellow_bold_print(message)) 
-		error_message			= lambda message: logger.error(redprint(message)) 
-		critical_message 		= lambda message: logger.critical(yellow_bold_print(message)) 
+		self.debug_message			= lambda message: logger.debug(blueprint(message)) 
+		self.info_message	 		= lambda message: logger.info(greenprint(message)) 
+		self.warning_message  		= lambda message: logger.warning(yellow_bold_print(message)) 
+		self.error_message			= lambda message: logger.error(redprint(message)) 
+		self.critical_message 		= lambda message: logger.critical(yellow_bold_print(message)) 
 
 	def error_exit(self, message : str, exception : Exception):
-		redprint(message)
+		self.error_message(message = message)
 		print(exception.with_traceback)
 		sys.exit()
 	
@@ -204,9 +204,9 @@ class Stepper:
 				herp = output.decode()
 				derp = error.decode()
 				for output_line in herp[0].decode(encoding='utf-8').split('\n'):
-					greenprint(output_line)
-				for error_lines in herp[0].decode(encoding='utf-8').split('\n'):
-					greenprint(error_lines)
+					self.info_message(output_line)
+				for error_lines in derp[0].decode(encoding='utf-8').split('\n'):
+					self.critical_message(error_lines)
 
 				return step
 				
@@ -225,18 +225,38 @@ class Chroot:
 	def __init__(self, kwargs):
 		for (k, v) in kwargs.items():
 			setattr(self, k, v)
+
+	def ls_test(self):
+		steps = { 'ls_user' : ["ls -la ~/"					   ,\
+							 	 "[+] Command Sucessful"							   ,\
+								 "[-]  Command Failed! Check the logfile!"],\
+				 'ls_root' : ["ls -la /"					   ,\
+								 "[+] Command Sucessful!"							   ,\
+								 "[-]  Command Failed! Check the logfile!"],\
+				 'ls_etc'  : ["ls -la /etc"					   ,\
+								 "[+] Command Sucessful"							   ,\
+								 "[-] ls -la Failed! Check the logfile!"],\
+				'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"'									   ,\
+					  			 "[+] LOL!"							 								   ,\
+					  			 "[-] DICKS Failed! Check the logfile!" 								   ]}
+	#self.current_command = steps['mount_dev']
+	stepper = Stepper.step(steps=steps)
+	if stepper.returncode == 1:
+		print("wat")
+	else:
+		error_exit("oh no", stepper)
 		
 	def chroot(self):
-		steps = { 'mount_dev' : ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)					   ,\
-							 	 "[+] Mounted /dev on {}!".format(self.sandy_path)							   ,\
-								 "[-] Mounting /dev on {} Failed! Check the logfile!".format(self.sandy_path) ],\
-				 'mount_proc' : ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)					   ,\
-								 "[+] Mounted /proc on {}!".format(self.sandy_path)							   ,\
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.sandy_path)],\
-				 'mount_sys'  : ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)					   ,\
-								 "[+] Mounted /proc on {}!".format(self.sandy_path)							   ,\
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.sandy_path)],\
-				'chroot'	 :	["sudo chroot {} ".format(sandy_path)										   ,\
+		steps = { 'mount_dev' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base)					   ,\
+							 	 "[+] Mounted /dev on {}!".format(self.chroot_base)							   ,\
+								 "[-] Mounting /dev on {} Failed! Check the logfile!".format(self.chroot_base) ],\
+				 'mount_proc' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base)					   ,\
+								 "[+] Mounted /proc on {}!".format(self.chroot_base)							   ,\
+								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],\
+				 'mount_sys'  : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base)					   ,\
+								 "[+] Mounted /proc on {}!".format(self.chroot_base)							   ,\
+								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],\
+				'chroot'	 :	["sudo chroot {} ".format(chroot_base)										   ,\
 					  			 "[+] {}!".format()							 								   ,\
 					  			 "[-] {} Failed! Check the logfile!".format() 								   ]}
 	#self.current_command = steps['mount_dev']
@@ -268,24 +288,24 @@ class Chroot:
 					  "[-] {} Failed! Check the logfile!".format() 	],\
 				 'adduser': \
 					 ["useradd {}".format(user)						 ,\
-					  "[+] {}!".format()							 ,\
-					  "[-] {} Failed! Check the logfile!".format() 	],\
+					  "[+] !"							 ,\
+					  "[-] Failed! Check the logfile!" 	],\
 				 'change_password': \
 					 ["passwd  {}".format(password)					 ,\
-					  "[+] {}!".format()							 ,\
-					  "[-] {} Failed! Check the logfile!".format() 	],\
+					  "[+] !"							 ,\
+					  "[-] Failed! Check the logfile!" 	],\
 				 'login': \
 					 ["login {}".format(user)						 ,\
-					  "[+] {}!".format()							 ,\
-					  "[-] {} Failed! Check the logfile!".format() 	],\
+					  "[+] !"							 ,\
+					  "[-] Failed! Check the logfile!" 	],\
 				 'apt_update': \
 					 ["sudo -S apt-get update"						 ,\
-					  "[+] {}!".format()							 ,\
-					  "[-] {} Failed! Check the logfile!".format() 	],\
+					  "[+] !"							 ,\
+					  "[-] Failed! Check the logfile!" 	],\
 				 'apt_install_extras': \
 					 ["sudo -S apt-get --no-install-recommends install {}".format(extras)	,\
-					  "[+] {}!".format()							 ,\
-					  "[-] {} Failed! Check the logfile!".format() 	]}
+					  "[+] !"							 ,\
+					  "[-] Failed! Check the logfile!" 	]}
 				# TODO: clean the gpg error message
 				# sudo -S apt-get install locales dialog
 				# sudo -S locale-gen en_US.UTF-8  # or your preferred locale
@@ -293,3 +313,6 @@ class Chroot:
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = Stepper.step(self.current_command)
+
+if __name__ == "__main__":
+	asdf = Chroot.ls_test()
