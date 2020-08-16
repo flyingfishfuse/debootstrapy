@@ -1,4 +1,6 @@
 # debootstrapy
+
+run the test, the test works. I am happy, my first COMPLETED(kinda) project!
 	- infrastructure that allows for running bash scripts with python
  
 	- python based linux tool for using debootstrap to make a networked , debian based, sandbox OR a live-usb image with persistance using only basic debian/linux/gnu tools
