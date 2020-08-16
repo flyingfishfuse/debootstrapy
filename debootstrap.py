@@ -62,62 +62,31 @@ class Debootstrap:
 			* /dev, /proc, /sys
 			'''
 		# Sequential commands
-		greenprint("[+] Beginning Debootstrap")
-		self.current_command = "sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
+		"[+] Beginning Debootstrap"
+		steps = "sudo debootstrap --components {} --arch {} , bionic {} {}".format( \
 												 components,arch,sandy_path,repository)
-		stepper = Stepper.step(self.current_command)
-		if stepper.returncode == 1:
-			greenprint("[+] Debootstrap Finished Successfully!")
-		elif stepper.returncode != 1:
-			error_exit("[-]Debootstrap Failed! Check the logfile!")
+		"[+] Debootstrap Finished Successfully!"
+		"[-]Debootstrap Failed! Check the logfile!"
 
-############################################
 		#resolv.conf copy
-		greenprint("[+] Copying Resolv.conf")
-		self.current_command = "sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(sandy_path)
-		stepper = Stepper.step(self.current_command)
-		if stepper.returncode == 1:
-			greenprint("[+] Resolv.conf copied!") 
-		else:
-			error_exit("[-]Copying Resolv.conf Failed! Check the logfile!")
+		"[+] Copying Resolv.conf"
+		"sudo cp /etc/resolv.conf {}/etc/resolv.conf".format(sandy_path)
+		"[+] Resolv.conf copied!"
+		"[-]Copying Resolv.conf Failed! Check the logfile!"
 
-##########################################
 		# sources.list copy
-		print("[+] Copying Sources.list")
-		self.current_command = ["sudo cp /etc/apt/sources.list {}/etc/apt/".format(sandy_path)]
-		stepper = Stepper.step(self.current_command)
-		if stepper.returncode == 1:
-			print("[+] Sources.list copied!") 
-		else:
-			error_exit("[-]Copying Sources.list Failed! Check the logfile!")
+		"[+] Copying Sources.list"
+		["sudo cp /etc/apt/sources.list {}/etc/apt/".format(sandy_path)]
+		"[+] Sources.list copied!"
+		"[-]Copying Sources.list Failed! Check the logfile!"
 
-##########################################
 		#mount and bind the proper volumes
 		# /dev
-		print("[+] Mounting /dev" )
-		self.current_command = ["sudo mount -o bind /dev {}/dev".format(sandy_path)]
-		stepper = Stepper.step(self.current_command)
-		if stepper.returncode == 1:
-			print("[+] Mounted!") 
-		else:
-			error_exit("[-]Mounting /dev Failed! Check the logfile!")
+		"[+] Mounting /dev" 
+		["sudo mount -o bind /dev {}/dev".format(sandy_path)]
+		"[+] Mounted!"
+		"[-]Mounting /dev Failed! Check the logfile!"
 		# /proc
-		print("[+] Mounting /proc")
-	
-########################################
-		self.current_command = ["sudo mount -o bind -t proc /proc {}/proc".format(sandy_path)]
-		stepper = Stepper.step(self.current_command)
-		if stepper.returncode == 1:
-			print("[+] Mounted!") 
-		else:
-			error_exit("[-]Mounting /proc Failed! Check the logfile!")
-
-#######################################
-		# /sys
-		print("[+] Mounting /sys")
-		self.current_command = ["sudo mount -o bind -t sys /sys {}/sys".format(sandy_path)]
-		stepper = Stepper.step(self.current_command)
-		if stepper.returncode == 1:
-			print("[+] Mounted!") 
-		else:
-			error_exit("[-]Mounting /sys Failed! Check the logle!")
+		"[+] Mounting /proc"
+		["sudo mount -o bind -t proc /proc {}/proc".format(sandy_path)]
+		["sudo mount -o bind -t sys /sys {}/sys".format(sandy_path)]
