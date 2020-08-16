@@ -146,21 +146,19 @@ Steps through the command list
 				#						stdin=read, 
 				#						stdout=sys.stdout, 
 				#						stderr=subprocess.PIPE)
-				step = subprocess.Popen(command.split(" "),
+				step = subprocess.Popen(command,
 										shell=shell_env,
 				 						stdout=subprocess.PIPE,
 				 						stderr=subprocess.PIPE)
 				#Note that this is limited to sending a maximum of 64kB at a time,
 				#byteswritten = os.write(write, str(command))
 				output, error = step.communicate()
-				herp = output.decode(encoding='utf-8')
-				derp = error.decode(encoding='utf-8')
-				for output_line in herp[0].split('\n'):
+				#herp = output.decode()#encoding='utf-8')
+				#derp = error.decode()#encoding='utf-8')
+				for output_line in output.decode().split('\n'):
 					info_message(output_line)
-					print(output_line)
-				for error_lines in derp[0].split('\n'):
+				for error_lines in error.decode().split('\n'):
 					critical_message(error_lines)
-					print(error_lines)
 				return step
 			elif blocking == False:
 				# TODO: not implemented yet				
