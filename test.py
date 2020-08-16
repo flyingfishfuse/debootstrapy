@@ -30,7 +30,7 @@
 """
 This is a test of the command framework
 
-It will chroot into the folder of your choice from commandline args
+It will chroot into the folder of your choice
 
 """
 import os
