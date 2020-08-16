@@ -35,12 +35,16 @@ It will chroot into the folder of your choice from commandline args
 """
 import os
 import sys
+import inspect
 import logging 
 import pathlib
+import pkgutil
 import argparse
 import subprocess
 import configparser
+from pathlib import Path
 from io import BytesIO,StringIO
+from importlib import import_module
 
 __author__ = 'Adam Galindo'
 __email__ = 'null@null.com'
@@ -69,6 +73,30 @@ makegreen  = lambda text: Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL if (C
 makeblue   = lambda text: Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
 makeyellow = lambda text: Fore.YELLOW + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
 yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.format(text) + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
+
+###################################################################################
+## Dynamic imports
+###################################################################################
+def dynamic_import(module_to_import:str, name_as:str):
+	'''
+	Dynamically imports a module
+		- used for the extensions
+	
+	Usage:
+		thing = class.dynamic_import('pybash_script.classname', name='fishy')
+	''' 
+	list_of_subfiles = pkgutil.iter_modules([os.path.dirname(__file__)])
+	imported_module = import_module('.' + name_as, package=__name__)
+	class_filter = ['Stepper']
+	lambda classname: classname != any(class_filter) and not classname.startswith('__')
+	class_name = list(filter(classname(), dir(imported_module)))
+	new_class = getattr(imported_module, class_name[0])
+
+	# need to put an error check here
+	setattr(sys.modules[__name__], name, new_class)
+
+	return new_class
+
 ###################################################################################
 # Commandline Arguments
 ###################################################################################
@@ -110,7 +138,7 @@ class Stepper:
 	steps = {"command_name"  : ["string with shell command"		  , "[-] failure message", "[+] success message" ] ,
 		 	 "command_name2" : ["another string with a shell command", "[-] failure message", "[+] success message" ] ,}
 	'''
-	def __init__(self):
+	def __init__(self, kwargs):
 		for (k, v) in kwargs.items():
 			setattr(self, k, v)
 		self.script_cwd		   	= pathlib.Path().absolute()
@@ -190,7 +218,7 @@ class Stepper:
 			yellow_bold_print("[-] Shell Command failed!")
 			return derp
 
-class CommandRunner:
+class Chroot:
 	'''
 	fuck it, we doin' this
 	'''

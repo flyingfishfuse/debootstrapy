@@ -188,6 +188,9 @@ if __name__ == "__main__":
 	# dont use this here, not time for it to be parsed yet
 	#arguments = parser.parse_args()
 
+def import_script(script:str):
+	
+
 class Stepper:
 	def __init__(self):
 		self.script_cwd		   = pathlib.Path().absolute()
@@ -258,45 +261,41 @@ def thing_to_do(self, params):
 			error_exit("[-] Failure Message", derp)
 
 	'''
-	def __init__(self, sand_hostname, user, password ,\
-				 extra, sand_mac, sand_ip,sand_iface ,\
-				 sandy_netmask, sandy_path, arch	 ,\
-				 repository, components, log_file	,\
-				 host_iface, internal_ip, gateway	,\
-				 livedisk_hwname, file_source, bit_size,\
-                 temp_dir, file_source_dir):
-
-		self.current_command	 = str
-
-		self.user				= user
-		self.password			= password
-		self.sandy_mac			= sand_mac
-		self.sandy_ip			= sand_ip
-		self.sandy_iface		= sand_iface
-		self.sandy_netmask		= sandy_netmask
-		self.sandy_path			= sandy_path
-		self.sandbox_hostname	= sand_hostname 
-		self.host_iface			= host_iface
-		self.internal_ip		= internal_ip
-		self.gateway			= gateway
-
-		self.bit_size			= "64"
-		self.arch				= arch
-		self.repository			= repository
-		self.components			= components
-		self.log_file			= log_file
+	def __init__(self, kwargs):
+		for (k, v) in kwargs.items():
+			setattr(self, k, v)
+		self.current_command	= str
 		self.extras				= "debconf nano curl"
-		self.extra_packages		= extra_extra
-
-		self.file_source		= file_source
-		self.livedisk_hw_name	= livedisk_hwname
 		self.error_code_from_current_command = ""
-		self.temp_dir			= temp_dir            #/tmp
 		self.live_disk_dir		= self.temp_dir      + '/live'
 		self.temp_boot_dir		= self.live_disk_dir + '/boot'
 		self.efi_dir			= self.temp_dir      + '/efi'
 		self.persistance_dir	= self.temp_dir      + '/persistance'
 		self.file_source_dir	= self.temp_dir + file_source_dir
+
+
+	###################################################################################
+	## Dynamic imports
+	###################################################################################
+	def dynamic_import(self, module_to_import:str, name_as:str):
+		'''
+		Dynamically imports a module
+			- used for the extensions
+
+		Usage:
+			thing = class.dynamic_import('pybash_script.classname', name='fishy')
+		''' 
+		list_of_subfiles = pkgutil.iter_modules([os.path.dirname(__file__)])
+		imported_module = import_module('.' + name_as, package=__name__)
+		class_filter = ['Stepper']
+		lambda classname: classname != any(class_filter) and not classname.startswith('__')
+		class_name = list(filter(classname(), dir(imported_module)))
+		new_class = getattr(imported_module, class_name[0])
+
+		# need to put an error check here
+		setattr(sys.modules[__name__], name, new_class)
+
+		return new_class
 
 	def setup_disk(self, diskname, efi_dir, persistance_dir, temp_boot_dir, live_disk_dir):
 		# This creates the basic disk structure of an EFI disk with a single OS.
