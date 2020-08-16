@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 ################################################################################
-##			debootstrapy - a linux tool for using debootstrap
-###############################################################################
-# Copyright (c) 2020 Adam Galindo
-#				
+##			debootstrapy - a linux tool for using debootstrap				  ##
+################################################################################
+# Copyright (c) 2020 Adam Galindo											  ##
+#																			  ##
 # Permission is hereby granted, free of charge, to any person obtaining a copy##
 # of this software and associated documentation files (the "Software"),to deal##
 # in the Software without restriction, including without limitation the rights##
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell  
-# copies of the Software, and to permit persons to whom the Software is	
-# furnished to do so, subject to the following conditions:		
-#			  
-# Licenced under GPLv3				
-# https://www.gnu.org/licenses/gpl-3.0.en.html	
-#							  
-# The above copyright notice and this permission notice shall be included in 
-# all copies or substantial portions of the Software.		
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell   ##
+# copies of the Software, and to permit persons to whom the Software is		  ##
+# furnished to do so, subject to the following conditions:					  ##
+#																			  ##
+# Licenced under GPLv3														  ##
+# https://www.gnu.org/licenses/gpl-3.0.en.html								  ##
+#																			  ##
+# The above copyright notice and this permission notice shall be included in  ##
+# all copies or substantial portions of the Software.						  ##
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -105,6 +105,7 @@ Steps through the command list
 		self.example  = {"ls_root"  : ["ls -la /", "[+] success message", "[-] failure message" ]}
 		self.example2 = {"ls_etc"  : ["ls -la /etc"		  , "[-] failure message", "[+] success message" ] ,
 		 	 			 "ls_home" : ["ls -la ~/", "[-] failure message", "[+] success message" ] ,}
+
 	def error_exit(self, message : str, exception : Exception):
 		self.error_message(message = message)
 		print(exception.with_traceback)
@@ -117,7 +118,7 @@ Steps through the command list
 				success = instruction[1]
 				fail 	= instruction[2]
 				self.current_command = cmd
-				stepper = self.exec_command(self.current_command)
+				stepper = self.exec_command(str(self.current_command))
 				if stepper.returncode == 1 :
 					self.info_message(success)
 				else:
@@ -133,7 +134,7 @@ Steps through the command list
 				fail 	= instruction[2]
 				self.current_command = cmd
 				stepper = self.exec_command(self.current_command)
-				if stepper.returncode == 1 :
+				if stepper.returncode == 0 :
 					self.info_message(success)
 				else:
 					self.error_message(error)
@@ -144,7 +145,18 @@ Steps through the command list
 		'''TODO: add formatting'''
 		try:
 			if blocking == True:
-				step = subprocess.Popen(command , shell=shell_env , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				read, write = os.pipe()
+				#step = subprocess.Popen(command, 
+				#						shell=shell_env, 
+				#						stdin=read, 
+				#						stdout=sys.stdout, 
+				#						stderr=subprocess.PIPE)
+				step = subprocess.Popen(command,
+										shell=shell_env,
+				 						stdout=subprocess.PIPE,
+				 						stderr=subprocess.PIPE)
+				#Note that this is limited to sending a maximum of 64kB at a time,
+				#byteswritten = os.write(write, str(command))
 				output, error = step.communicate()
 				herp = output.decode()
 				derp = error.decode()
@@ -216,7 +228,7 @@ class Chroot:
 					"[-] Failed! Check the logfile!"]
 				}
 	#self.current_command = steps['mount_dev']
-		stepper = Stepper.step(steps=steps)
+		stepper = Stepper.step(dict_of_commands=steps)
 		if isinstance(stepper, Exception):
 			error_exit('[-] Chroot Failure, Check the Logfile!', stepper)
 		else:
