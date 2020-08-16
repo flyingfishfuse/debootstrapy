@@ -30,49 +30,19 @@
 """
 This is a test of the command framework
 
-It will chroot into the folder of your choice from commandline args
+It will do some disk operations necessary for usb live installs
 
 """
 import os
 import sys
-import inspect
-import logging 
 import pathlib
-import pkgutil
-import argparse
 import subprocess
-import configparser
 from pathlib import Path
-from io import BytesIO,StringIO
-from importlib import import_module
 
 __author__ = 'Adam Galindo'
 __email__ = 'null@null.com'
 __version__ = '1'
 __license__ = 'GPLv3'
-
-###################################################################################
-# Color Print Functions
-###################################################################################
-try:
-	import colorama
-	from colorama import init
-	init()
-	from colorama import Fore, Back, Style
-	COLORMEQUALIFIED = True
-except ImportError as derp:
-	print("[-] NO COLOR PRINTING FUNCTIONS AVAILABLE")
-	COLORMEQUALIFIED = False
-
-blueprint = lambda text: print(Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-greenprint = lambda text: print(Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-redprint = lambda text: print(Fore.RED + ' ' +  text + ' ' + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
-# inline colorization for lambdas in a lambda
-makered	= lambda text: Fore.RED + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-makegreen  = lambda text: Fore.GREEN + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-makeblue   = lambda text: Fore.BLUE + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-makeyellow = lambda text: Fore.YELLOW + ' ' +  text + ' ' + Style.RESET_ALL if (COLORMEQUALIFIED == True) else None
-yellow_bold_print = lambda text: print(Fore.YELLOW + Style.BRIGHT + ' {} '.format(text) + Style.RESET_ALL) if (COLORMEQUALIFIED == True) else print(text)
 
 class DiskOperations:
 	'''
@@ -126,7 +96,7 @@ class DiskOperations:
 		if stepper.returncode == 1:
 			greenprint("[+] Disk Formatting Finished Sucessfully!")
 		else:
-			error_exit("[-] Disk Formatting Failed! Check the logfile!", SystemError)
+			error_exit("[-] Disk Formatting Failed! Check the logfile!", stepper)
 
 	def move_system_files(self, efi_dir, live_disk_dir,persistance_dir,file_source_dir):
 		# Creating Temporary work directories
@@ -166,4 +136,4 @@ class DiskOperations:
 		if stepper.returncode == 1:
 			print("")
 		else:
-			error_exit("", SystemError)
+			error_exit("", stepper)

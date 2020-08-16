@@ -235,7 +235,10 @@ class Chroot:
 								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.sandy_path)],\
 				 'mount_sys'  : ["sudo mount -o bind /dev {}/dev".format(self.sandy_path)					   ,\
 								 "[+] Mounted /proc on {}!".format(self.sandy_path)							   ,\
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.sandy_path) ]}
+								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.sandy_path)],\
+				'chroot'	 :	["sudo chroot {} ".format(sandy_path)										   ,\
+					  			 "[+] {}!".format()							 								   ,\
+					  			 "[-] {} Failed! Check the logfile!".format() 								   ]}
 	#self.current_command = steps['mount_dev']
 	stepper = Stepper.step(steps=steps)
 	if stepper.returncode == 1:
@@ -259,18 +262,34 @@ class Chroot:
 		- installs extras
 
 		'''
-		steps = ["sudo chroot {} ".format(sandy_path)								,\
-				 "useradd {}".format(user)											,\
-				 "passwd  {}".format(password)										,\
-				 "login {}".format(user)												,\
-				 "sudo -S apt-get update"													,\
-				 "sudo -S apt-get --no-install-recommends install {}".format(extras)	,\
-				#TODO: clean the gpg error message
-				 "sudo -S apt-get update"													]#,\  
-				 #If you don't talk en_US
-				 #["sudo -S apt-get install locales dialog"]									,\
-		#sudo -S locale-gen en_US.UTF-8  # or your preferred locale
-		#tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
+		steps = {'chroot': \
+					["sudo chroot {} ".format(sandy_path)			 ,\
+					  "[+] {}!".format()							 ,\
+					  "[-] {} Failed! Check the logfile!".format() 	],\
+				 'adduser': \
+					 ["useradd {}".format(user)						 ,\
+					  "[+] {}!".format()							 ,\
+					  "[-] {} Failed! Check the logfile!".format() 	],\
+				 'change_password': \
+					 ["passwd  {}".format(password)					 ,\
+					  "[+] {}!".format()							 ,\
+					  "[-] {} Failed! Check the logfile!".format() 	],\
+				 'login': \
+					 ["login {}".format(user)						 ,\
+					  "[+] {}!".format()							 ,\
+					  "[-] {} Failed! Check the logfile!".format() 	],\
+				 'apt_update': \
+					 ["sudo -S apt-get update"						 ,\
+					  "[+] {}!".format()							 ,\
+					  "[-] {} Failed! Check the logfile!".format() 	],\
+				 'apt_install_extras': \
+					 ["sudo -S apt-get --no-install-recommends install {}".format(extras)	,\
+					  "[+] {}!".format()							 ,\
+					  "[-] {} Failed! Check the logfile!".format() 	]}
+				# TODO: clean the gpg error message
+				# sudo -S apt-get install locales dialog
+				# sudo -S locale-gen en_US.UTF-8  # or your preferred locale
+				# tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
 		for instruction in steps:
 			self.current_command = instruction
 			stepper = Stepper.step(self.current_command)
