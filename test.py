@@ -122,9 +122,9 @@ Steps through the command list
 				self.current_command = cmd
 				stepper = self.exec_command(self.current_command)
 				if stepper.returncode == 1 :
-					return success
+					logger.info(success)
 				else:
-					return fail
+					logger.error(error)
 		except Exception as derp:
 			return derp
 	
@@ -181,6 +181,7 @@ class Chroot:
 		stepper = Stepper.step(steps=steps)
 		if stepper.returncode == 1:
 			self.info_message("wat")
+			logger.info(stepper)
 		else:
 			error_exit("oh no", stepper)
 		
@@ -208,10 +209,10 @@ class Chroot:
 				}
 	#self.current_command = steps['mount_dev']
 		stepper = Stepper.step(steps=steps)
-		if stepper.returncode == 1:
-			self.info_message("[+] Chroot Sucessful!")
-		else:
+		if isinstance(stepper, Exception):
 			error_exit('[-] Chroot Failure, Check the Logfile!', stepper)
+		else:
+			self.info_message("[+] Chroot Sucessful!")
 
 if __name__ == "__main__":
 	#arguments = parser.parse_args()
