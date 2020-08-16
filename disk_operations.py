@@ -93,10 +93,10 @@ class DiskOperations:
 				'[+] Success','[-] Failure'],
 				}
 		stepper = Stepper.step(steps)
-		if stepper.returncode == 1:
-			greenprint("[+] Disk Formatting Finished Sucessfully!")
-		else:
+		if isinstance(stepper, Exception):
 			error_exit("[-] Disk Formatting Failed! Check the logfile!", stepper)
+		else:
+			greenprint("[+] Disk Formatting Finished Sucessfully!")
 
 	def move_system_files(self, efi_dir, live_disk_dir,persistance_dir,file_source_dir):
 		# Creating Temporary work directories
@@ -120,8 +120,8 @@ class DiskOperations:
 					'[+] Success','[-] Failure']  
 				}
 		stepper = Stepper.step(steps)
-		if stepper.returncode == 1:
-			logger.info("[+] File Moving Finished Sucessfully!")
+		if isinstance(stepper, Exception):
+			self.info_message("[+] File Moving Finished Sucessfully!")
 		else:
 			error_exit("[-] File Moving Failed! Check the logfile!", stepper)
 
@@ -133,7 +133,7 @@ class DiskOperations:
 				 '[+] Persistance Established' , '[-] Persistance Failed!']
 				}
 		stepper = Stepper.step(steps=steps)
-		if stepper.returncode == 1:
+		if isinstance(stepper, Exception):
 			print("")
 		else:
 			error_exit("", stepper)

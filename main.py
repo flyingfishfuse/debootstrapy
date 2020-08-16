@@ -39,6 +39,16 @@ debootstrapy:
 	config file must be named "debootstrapy.config" and be in the same directory
 
 """
+#read, write = os.pipe()
+#step = subprocess.Popen(something_to_set_env, 
+#						shell=shell_env, 
+#						stdin=read, 
+#						stdout=sys.stdout, 
+#						stderr=subprocess.PIPE)
+#Note that this is limited to sending a maximum of 64kB at a time,
+# pretty much an interavtice session
+#byteswritten = os.write(write, str(command))
+
 import os
 import sys
 import pathlib
@@ -195,11 +205,11 @@ NARF!
 			thing = class.dynamic_import('pybash_script.classname', name='fishy')
 		''' 
 		list_of_subfiles = pkgutil.iter_modules([os.path.dirname(__file__)])
-		imported_module = import_module('.' + name_as, package=__name__)
-		class_filter = ['Stepper']
+		imported_module  = import_module('.' + name_as, package=__name__)
+		class_filter     = ['Stepper']
 		lambda classname: classname != any(class_filter) and not classname.startswith('__')
-		class_name = list(filter(classname(), dir(imported_module)))
-		new_class = getattr(imported_module, class_name[0])
+		class_name       = list(filter(classname(), dir(imported_module)))
+		new_class        = getattr(imported_module, class_name[0])
 
 		# need to put an error check here
 		setattr(sys.modules[__name__], name, new_class)
@@ -212,7 +222,7 @@ if __name__ == "__main__":
 	#are we using config?
 	if arguments.config_file == True:
 		config = configparser.ConfigParser()
-		config.read('debootstrapy.config')
+		config.read(arguments.config_path)
 		# user needs to set config file or arguments
 		user_choice = config['Thing To Do']['choice']
 		if user_choice== 'doofus':
@@ -227,5 +237,7 @@ if __name__ == "__main__":
 		else:
 			redprint("[-] Option not in config file")
 	elif arguments.config_file == False and (arguments.dynamic_import == True):
-		CommandRunner.dynamic_import(arguments.dynamic_import, arguments.dynamic_import)
+		new_command = CommandRunner()
+        new_command_class = new_command.dynamic_import(arguments.dynamic_import, arguments.dynamic_import)
+
 		pass

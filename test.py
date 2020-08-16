@@ -176,7 +176,7 @@ class Chroot:
 				 'ls_etc'  : ["ls -la /etc",
 								 "[+] Command Sucessful",
 								 "[-] ls -la Failed! Check the logfile!"],
-				 'cowsay_dicks'	 :	['cowsay | lolcat "Magikarp used Dick Slap"',
+				 'cowsay_dicks'	 :	['cowsay "Magikarp used Dick Slap" | lolcat',
 					  			 "[+] LOL!",
 					  			 "[-] DICKS Failed! Check the logfile!"]}
 		#self.current_command = steps['mount_dev']
