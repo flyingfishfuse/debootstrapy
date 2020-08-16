@@ -131,18 +131,36 @@ class Stepper:
 		print(exception.with_traceback)
 		sys.exit()
 	
-	def step(self, dict_of_commands : dict):
+	def step_test(self, dict_of_commands : dict):
 		example  = {"command_name"  : ["string with shell command", "[+] success message", "[-] failure message" ]}
 		example2 = {"command_name"  : ["string with shell command"		  , "[-] failure message", "[+] success message" ] ,
 		 	 		"command_name2" : ["another string with a shell command", "[-] failure message", "[+] success message" ] ,}
 		try:
-			for instruction in example:
-				instruction[0]
+			for instruction in example.values(), example2.values():
+				cmd 	= instruction[0]
+				success = instruction[1]
+				fail 	= instruction[2]
+				self.current_command = cmd
 				stepper = self.exec_command(self.current_command)
 				if stepper.returncode == 1 :
-					return self.current_command
+					return success
 				else:
-					return false
+					return fail
+		except Exception as derp:
+			return derp
+
+	def step(self, dict_of_commands : dict):
+		try:
+			for instruction in dict_of_commands.values():
+				cmd 	= instruction[0]
+				success = instruction[1]
+				fail 	= instruction[2]
+				self.current_command = cmd
+				stepper = self.exec_command(self.current_command)
+				if stepper.returncode == 1 :
+					return success
+				else:
+					return fail
 		except Exception as derp:
 			return derp
 	
