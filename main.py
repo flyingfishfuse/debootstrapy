@@ -87,6 +87,10 @@ if __name__ == "__main__":
 								 dest		= 'config_file',
 								 action		= "store_true" ,
 								 help		= 'Use config file, if used, will ignore other options' )
+	parser.add_argument('--execute-module',
+								 dest		= 'dynamic_import',
+								 action		= "store" ,
+								 help		= 'will execute user created module' )
 
 	# dont use this here, not time for it to be parsed yet
 	#arguments = parser.parse_args()
@@ -192,5 +196,6 @@ if __name__ == "__main__":
 		
 		else:
 			redprint("[-] Option not in config file")
-	elif arguments.config_file == False:
+	elif arguments.config_file == False and (arguments.dynamic_import == True):
+		CommandRunner.dynamic_import(arguments.dynamic_import, arguments.dynamic_import)
 		pass
