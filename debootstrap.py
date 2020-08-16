@@ -90,3 +90,49 @@ class Debootstrap:
 		"[+] Mounting /proc"
 		["sudo mount -o bind -t proc /proc {}/proc".format(sandy_path)]
 		["sudo mount -o bind -t sys /sys {}/sys".format(sandy_path)]
+
+	def stage2(self, sandy_path, user, password, extras):
+		'''
+	Establishes Chroot
+		- sets username / password
+
+		- LOG'S IN, DONT LEAVE THE COMPUTER
+			-for security purposes
+
+		- updates packages
+		- installs debconf, nano, curl
+		- installs extras
+
+		'''
+		steps = {'chroot': \
+					["sudo chroot {} ".format(sandy_path),
+					  "[+] {}!".format(),
+					  "[-] {} Failed! Check the logfile!".format() 	],
+				 'adduser':
+					 ["useradd {}".format(user),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'change_password':
+					 ["passwd  {}".format(password),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'login':
+					 ["login {}".format(user),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'apt_update':
+					 ["sudo -S apt-get update",
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'apt_install_extras':
+					 ["sudo -S apt-get --no-install-recommends install {}".format(extras),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	]
+				}
+				# TODO: clean the gpg error message
+				# sudo -S apt-get install locales dialog
+				# sudo -S locale-gen en_US.UTF-8  # or your preferred locale
+				# tzselect; TZ='Continent/Country'; export TZ  #Congure and use our local time instead of UTC; save in .prole
+		for instruction in steps:
+			self.current_command = instruction
+			stepper = Stepper.step(self.current_command)

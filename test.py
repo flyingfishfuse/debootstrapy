@@ -106,6 +106,11 @@ def dynamic_import(module_to_import:str, name_as:str):
 # not activate the argument or configuration file parsing engines
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='python/bash based, distro repacker')
+	parser.add_argument('--use-arguments',
+								 dest	= 'use_args',
+								 action  = "store_true" ,
+								 default = "derp" ,
+								 help	= "Use Arguments" )
 	parser.add_argument('--user',
 								 dest	= 'user',
 								 action  = "store" ,
@@ -227,19 +232,21 @@ class Chroot:
 			setattr(self, k, v)
 
 	def ls_test(self):
-		steps = { 'ls_user' : ["ls -la ~/"					   ,\
-							 	 "[+] Command Sucessful"							   ,\
-								 "[-]  Command Failed! Check the logfile!"],\
-				 'ls_root' : ["ls -la /"					   ,\
-								 "[+] Command Sucessful!"							   ,\
-								 "[-]  Command Failed! Check the logfile!"],\
-				 'ls_etc'  : ["ls -la /etc"					   ,\
-								 "[+] Command Sucessful"							   ,\
-								 "[-] ls -la Failed! Check the logfile!"],\
-				'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"'									   ,\
-					  			 "[+] LOL!"							 								   ,\
-					  			 "[-] DICKS Failed! Check the logfile!" 								   ]}
+		steps = { 'ls_user' : ["ls -la ~/",
+							 	 "[+] Command Sucessful",
+								 "[-]  Command Failed! Check the logfile!"],
+				 'ls_root' : ["ls -la /",
+								 "[+] Command Sucessful!",
+								 "[-]  Command Failed! Check the logfile!"],
+				 'ls_etc'  : ["ls -la /etc",
+								 "[+] Command Sucessful",
+								 "[-] ls -la Failed! Check the logfile!"],
+				'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"',
+					  			 "[+] LOL!",
+					  			 "[-] DICKS Failed! Check the logfile!"]}
 	#self.current_command = steps['mount_dev']
+	#stepper = Stepper.step(steps=self.current_command)
+	
 	stepper = Stepper.step(steps=steps)
 	if stepper.returncode == 1:
 		print("wat")
@@ -247,18 +254,19 @@ class Chroot:
 		error_exit("oh no", stepper)
 		
 	def chroot(self):
-		steps = { 'mount_dev' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base)					   ,\
-							 	 "[+] Mounted /dev on {}!".format(self.chroot_base)							   ,\
-								 "[-] Mounting /dev on {} Failed! Check the logfile!".format(self.chroot_base) ],\
-				 'mount_proc' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base)					   ,\
-								 "[+] Mounted /proc on {}!".format(self.chroot_base)							   ,\
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],\
-				 'mount_sys'  : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base)					   ,\
-								 "[+] Mounted /proc on {}!".format(self.chroot_base)							   ,\
-								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],\
-				'chroot'	 :	["sudo chroot {} ".format(chroot_base)										   ,\
-					  			 "[+] {}!".format()							 								   ,\
-					  			 "[-] {} Failed! Check the logfile!".format() 								   ]}
+		steps = { 'mount_dev' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
+							 	 "[+] Mounted /dev on {}!".format(self.chroot_base),
+								 "[-] Mounting /dev on {} Failed! Check the logfile!".format(self.chroot_base) ],
+				 'mount_proc' : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
+								 "[+] Mounted /proc on {}!".format(self.chroot_base),
+								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],
+				 'mount_sys'  : ["sudo mount -o bind /dev {}/dev".format(self.chroot_base),
+								 "[+] Mounted /proc on {}!".format(self.chroot_base),
+								 "[-] Mounting /proc on {} Failed! Check the logfile!".format(self.chroot_base)],
+				'chroot'	 :	["sudo chroot {} ".format(chroot_base),
+					  			 "[+] {}!".format(),
+					  			 "[-] {} Failed! Check the logfile!".format()]
+				}
 	#self.current_command = steps['mount_dev']
 	stepper = Stepper.step(steps=steps)
 	if stepper.returncode == 1:
@@ -283,29 +291,30 @@ class Chroot:
 
 		'''
 		steps = {'chroot': \
-					["sudo chroot {} ".format(sandy_path)			 ,\
-					  "[+] {}!".format()							 ,\
-					  "[-] {} Failed! Check the logfile!".format() 	],\
-				 'adduser': \
-					 ["useradd {}".format(user)						 ,\
-					  "[+] !"							 ,\
-					  "[-] Failed! Check the logfile!" 	],\
-				 'change_password': \
-					 ["passwd  {}".format(password)					 ,\
-					  "[+] !"							 ,\
-					  "[-] Failed! Check the logfile!" 	],\
-				 'login': \
-					 ["login {}".format(user)						 ,\
-					  "[+] !"							 ,\
-					  "[-] Failed! Check the logfile!" 	],\
-				 'apt_update': \
-					 ["sudo -S apt-get update"						 ,\
-					  "[+] !"							 ,\
-					  "[-] Failed! Check the logfile!" 	],\
-				 'apt_install_extras': \
-					 ["sudo -S apt-get --no-install-recommends install {}".format(extras)	,\
-					  "[+] !"							 ,\
-					  "[-] Failed! Check the logfile!" 	]}
+					["sudo chroot {} ".format(sandy_path),
+					  "[+] {}!".format(),
+					  "[-] {} Failed! Check the logfile!".format() 	],
+				 'adduser':
+					 ["useradd {}".format(user),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'change_password':
+					 ["passwd  {}".format(password),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'login':
+					 ["login {}".format(user),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'apt_update':
+					 ["sudo -S apt-get update",
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	],
+				 'apt_install_extras':
+					 ["sudo -S apt-get --no-install-recommends install {}".format(extras),
+					  "[+] !",
+					  "[-] Failed! Check the logfile!" 	]
+				}
 				# TODO: clean the gpg error message
 				# sudo -S apt-get install locales dialog
 				# sudo -S locale-gen en_US.UTF-8  # or your preferred locale
@@ -315,4 +324,6 @@ class Chroot:
 			stepper = Stepper.step(self.current_command)
 
 if __name__ == "__main__":
-	asdf = Chroot.ls_test()
+	#arguments = parser.parse_args()
+	#if 	arguments.use_args == True:
+	Chroot.ls_test()

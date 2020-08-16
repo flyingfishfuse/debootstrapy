@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ################################################################################
-##			debootstrapy - a linux tool for using debootstrap				  ##
+##			debootstrapy - a linux tool for using chroot    				  ##
 ################################################################################
 # Copyright (c) 2020 Adam Galindo											  ##
 #																			  ##
