@@ -122,9 +122,9 @@ Steps through the command list
 				self.current_command = cmd
 				stepper = self.exec_command(self.current_command)
 				if stepper.returncode == 1 :
-					logger.info(success)
+					self.info_message(success)
 				else:
-					logger.error(error)
+					self.error_message(error)
 		except Exception as derp:
 			return derp
 	
@@ -181,7 +181,7 @@ class Chroot:
 		stepper = Stepper.step(steps=steps)
 		if stepper.returncode == 1:
 			self.info_message("wat")
-			logger.info(stepper)
+			self.info_message(stepper)
 		else:
 			error_exit("oh no", stepper)
 		
