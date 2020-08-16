@@ -140,21 +140,11 @@ Steps through the command list
 		'''TODO: add formatting'''
 		try:
 			if blocking == True:
-				#read, write = os.pipe()
-				#step = subprocess.Popen(something_to_set_env, 
-				#						shell=shell_env, 
-				#						stdin=read, 
-				#						stdout=sys.stdout, 
-				#						stderr=subprocess.PIPE)
 				step = subprocess.Popen(command,
 										shell=shell_env,
 				 						stdout=subprocess.PIPE,
 				 						stderr=subprocess.PIPE)
-				#Note that this is limited to sending a maximum of 64kB at a time,
-				#byteswritten = os.write(write, str(command))
 				output, error = step.communicate()
-				#herp = output.decode()#encoding='utf-8')
-				#derp = error.decode()#encoding='utf-8')
 				for output_line in output.decode().split('\n'):
 					info_message(output_line)
 				for error_lines in error.decode().split('\n'):
@@ -186,7 +176,7 @@ class Chroot:
 				 'ls_etc'  : ["ls -la /etc",
 								 "[+] Command Sucessful",
 								 "[-] ls -la Failed! Check the logfile!"],
-				 'cowsay_dicks'	 :	['lolcat cowsay "Magikarp used Dick Slap"',
+				 'cowsay_dicks'	 :	['cowsay | lolcat "Magikarp used Dick Slap"',
 					  			 "[+] LOL!",
 					  			 "[-] DICKS Failed! Check the logfile!"]}
 		#self.current_command = steps['mount_dev']
